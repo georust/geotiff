@@ -1,0 +1,10 @@
+[package]
+
+name = "rust_geotiff"
+version = "0.0.1"
+authors = ["Dominik Bucher <dobucher@ethz.ch>"]
+
+[dependencies]
+byteorder = "*"
+enum_primitive = "*"
+num = "*"
