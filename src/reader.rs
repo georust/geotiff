@@ -5,7 +5,7 @@ use num::FromPrimitive;
 
 use byteorder::{ReadBytesExt, ByteOrder, BigEndian, LittleEndian};
 
-use {TIFFByteOrder, IFD, IFDEntry, decode_tag, decode_tag_type,
+use {TIFFByteOrder, IFD, IFDEntry, decode_tag, decode_tag_type, tag_size,
 BYTE, SBYTE, SHORT, SSHORT, LONG, SLONG, FLOAT, TagType, TagValue};
 
 pub trait SeekableReader: Seek + Read {}
@@ -74,7 +74,7 @@ impl TIFFReader {
         let mut ifd = Box::new(IFD { count: entry_count, entries: Vec::with_capacity(entry_count as usize) });
 
         for entry_number in 0..entry_count as usize {
-            let entry = self.read_tag::<T>(entry_number, reader);
+            let entry = self.read_tag::<T>(ifd_offset as u64 + 2, entry_number, reader);
             match entry {
                 Ok(e) => ifd.entries.push(e),
                 Err(err) => println!("Invalid tag at index {}: {}", entry_number, err),
@@ -84,7 +84,43 @@ impl TIFFReader {
         Ok(ifd)
     }
 
-    fn read_tag<Endian: ByteOrder>(&self, entry_number: usize, reader: &mut SeekableReader) -> Result<IFDEntry> {
+    fn read_n(&self, reader: &mut SeekableReader, bytes_to_read: u64) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(bytes_to_read as usize);
+        let mut chunk = reader.take(bytes_to_read);
+        let status = chunk.read_to_end(&mut buf);
+        match status {
+            Ok(n) => assert_eq!(bytes_to_read as usize, n),
+            _ => panic!("Didn't read enough"),
+        }
+        buf
+    }
+
+    fn vec_to_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &TagType) -> TagValue {
+        let len = vec.len();
+        match tpe {
+            &TagType::ByteTag => TagValue::ByteValue(vec[0]),
+            &TagType::ASCIITag => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
+            &TagType::ShortTag => TagValue::ShortValue(Endian::read_u16(&vec[..])),
+            &TagType::LongTag => TagValue::LongValue(Endian::read_u32(&vec[..])),
+            &TagType::RationalTag => TagValue::RationalValue((Endian::read_u32(&vec[..(len/2)]),
+                Endian::read_u32(&vec[(len/2)..]))),
+            &TagType::SignedByteTag => TagValue::SignedByteValue(vec[0] as i8),
+            &TagType::SignedShortTag => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
+            &TagType::SignedLongTag => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
+            &TagType::SignedRationalTag => TagValue::SignedRationalValue((Endian::read_i32(&vec[..(len/2)]),
+                Endian::read_i32(&vec[(len/2)..]))),
+            &TagType::FloatTag => TagValue::FloatValue(Endian::read_f32(&vec[..])),
+            &TagType::DoubleTag => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
+            &TagType::UndefinedTag => TagValue::ByteValue(0),
+            _ => panic!("Tag not found"),
+        }
+    }
+
+    fn read_tag<Endian: ByteOrder>(&self, ifd_offset: u64, entry_number: usize,
+        reader: &mut SeekableReader) -> Result<IFDEntry> {
+        println!("Reading tag at {}/{}", ifd_offset, entry_number);
+        // Seek beginning (as each tag is 12 bytes long).
+        try!(reader.seek(SeekFrom::Start(ifd_offset + 12 * entry_number as u64)));
 
         // Bytes 0..1: u16 tag ID
         let tag_value = try!(reader.read_u16::<Endian>());
@@ -99,61 +135,49 @@ impl TIFFReader {
         let value_offset_value = try!(reader.read_u32::<Endian>());
 
         // Decode tag
-        let tag_msg = format!("Invalid tag {:x}", tag_value);
+        let tag_msg = format!("Invalid tag {:04X}", tag_value);
         let tag = decode_tag(tag_value).expect(&tag_msg);
 
         // Decode type
-        let tpe_msg = format!("Invalid tag type {:x}", tpe_value);
+        let tpe_msg = format!("Invalid tag type {:04X}", tpe_value);
         let tpe = decode_tag_type(tpe_value).expect(&tpe_msg);
+        let value_size = tag_size(&tpe);
+
+        // Let's get the value(s) of this tag.
+        let tot_size = count_value * value_size;
+        println!("{:04X} {:04X} {:08X} {:08X} {:?} {:?} {:?} {:?}", tag_value, tpe_value,
+            count_value, value_offset_value, tag, tpe, value_size, tot_size);
+
+        let mut values = Vec::with_capacity(count_value as usize);
+        if tot_size <= 4 {
+            // Can directly read the value at the value field. For simplicity, we simply reset
+            // the reader to the correct position.
+            try!(reader.seek(SeekFrom::Start(ifd_offset + 12 * entry_number as u64 + 8)));
+            for _ in 0..count_value as usize {
+                let value = self.read_n(reader, value_size as u64);
+                values.push(self.vec_to_value::<Endian>(value, &tpe));
+            }
+        } else {
+            // Have to read from the address pointed at by the value field.
+            try!(reader.seek(SeekFrom::Start(value_offset_value as u64)));
+            for _ in 0..count_value as usize {
+                let value = self.read_n(reader, value_size as u64);
+                values.push(self.vec_to_value::<Endian>(value, &tpe));
+            }
+        }
 
         // Create entry
-        let mut ifd_entry = IFDEntry {
+        let ifd_entry = IFDEntry {
             tag: tag,
             tpe: tpe,
             count: count_value,
             value_offset: value_offset_value,
-            value: None,
+            value: values,
         };
-/*
-        let maybe_tac = type_and_count_for_tag(ifd_entry.tag);
 
-        if maybe_tac.is_none() {
-            return Err(Error::new(ErrorKind::Other,
-                                  format!("Unknown tag {:?} in IFD", ifd_entry.tag)));
-        }
-
-        let (expected_typ, expected_count) = maybe_tac.unwrap();
-
-        println!("IFD[{:?}] tag: {:?} type: {:?} count: {} offset: {:08x}",
-                 entry_number, ifd_entry.tag, ifd_entry.typ, ifd_entry.count, ifd_entry.value_offset);
-
-        let valid_short_or_long = expected_typ == TagType::ShortOrLongTag &&
-            (ifd_entry.typ == TagType::ShortTag ||
-             ifd_entry.typ == TagType::LongTag);
-
-        if  ! valid_short_or_long && ifd_entry.typ != expected_typ {
-            println!("    *** ERROR: expected typ: {:?} found: {:?}", expected_typ, ifd_entry.typ);
-        }
-
-        if expected_count != 0 && ifd_entry.count != expected_count {
-            println!("    *** ERROR: expected count: {:?} found: {:?}", expected_count, ifd_entry.count);
-        }
-
-        if ifd_entry.count == 1 {
-            ifd_entry.value = match ifd_entry.typ {
-                TagType::ByteTag => Some(TagValue::ByteValue(ifd_entry.value_offset as BYTE)),
-                TagType::ShortTag => Some(TagValue::ShortValue(ifd_entry.value_offset as SHORT)),
-                TagType::LongTag => Some(TagValue::LongValue(ifd_entry.value_offset)),
-                TagType::SignedByteTag => Some(TagValue::SignedByteValue(ifd_entry.value_offset as SBYTE)),
-                TagType::SignedShortTag => Some(TagValue::SignedShortValue(ifd_entry.value_offset as SSHORT)),
-                TagType::SignedLongTag => Some(TagValue::SignedLongValue(ifd_entry.value_offset as SLONG)),
-                TagType::FloatTag => Some(TagValue::FloatValue(ifd_entry.value_offset as FLOAT)),
-                TagType::ShortOrLongTag => Some(TagValue::LongValue(ifd_entry.value_offset as LONG)), // @todo FIXME
-                _ => None
-            };
-        }
-
-        println!("    {:?}", ifd_entry.value);*/
+        println!("IFD[{:?}] tag: {:?} type: {:?} count: {} offset: {:08x} value: {:?}",
+                 entry_number, ifd_entry.tag, ifd_entry.tpe, ifd_entry.count,
+                 ifd_entry.value_offset, ifd_entry.value);
 
         Ok(ifd_entry)
     }

@@ -39,14 +39,6 @@ enum_from_primitive! {
         SignedRationalTag = 10,
         FloatTag          = 11,
         DoubleTag         = 12,
-
-        // No idea what those are...
-        Long8             = 16,
-        SLong8            = 17,
-        IFD8              = 18,
-
-        // Not part of spec
-        ShortOrLongTag    = 0xfffe,
     }
 }
 
@@ -64,11 +56,6 @@ pub fn tag_size(t: &TagType) -> u32 {
         TagType::SignedRationalTag => 8,
         TagType::FloatTag          => 4,
         TagType::DoubleTag         => 8,
-
-        // No idea what those are...
-        TagType::Long8             => 16,
-        TagType::SLong8            => 17,
-        TagType::IFD8              => 18,
         _                          => 0,
     }
 }
@@ -76,9 +63,9 @@ pub fn tag_size(t: &TagType) -> u32 {
 #[derive(Debug)]
 pub enum TagValue {
     ByteValue(BYTE),
+    AsciiValue(ASCII),
     ShortValue(SHORT),
     LongValue(LONG),
-    AsciiValue(ASCII),
     RationalValue(RATIONAL),
     SignedByteValue(SBYTE),
     SignedShortValue(SSHORT),
@@ -209,8 +196,14 @@ enum_from_primitive! {
         JPEGTablesTag                = 0x015b,
         CFARepeatPatternDimTag       = 0x828d,
         BatteryLevelTag              = 0x828f,
+        ModelPixelScaleTag           = 0x830e,
         IPTCTag                      = 0x83BB,
+        ModelTiepointTag             = 0x8482,
+        ModelTransformationTag       = 0x85D8,
         InterColorProfileTag         = 0x8773,
+        GeoKeyDirectoryTag           = 0x87AF,
+        GeoDoubleParamsTag           = 0x87B0,
+        GeoAsciiParamsTag            = 0x87B1,
         InterlaceTag                 = 0x8829,
         TimeZoneOffsetTag            = 0x882a,
         SelfTimerModeTag             = 0x882b,
@@ -227,6 +220,9 @@ enum_from_primitive! {
         // Private Tags
         PhotoshopTag                 = 0x8649,
         EXIFTag                      = 0x8769,
+
+        GDALMETADATA                 = 0xA480,
+        GDALNODATA                   = 0xA481,
     }
 }
 

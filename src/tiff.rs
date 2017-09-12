@@ -14,7 +14,7 @@ pub struct IFDEntry {
     pub tpe:          TagType,
     pub count:        LONG,
     pub value_offset: LONG,
-    pub value:        Option<TagValue>,
+    pub value:        Vec<TagValue>,
 }
 
 #[derive(Debug)]
