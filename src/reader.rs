@@ -43,6 +43,7 @@ impl TIFFReader {
         self.read_magic::<T>(reader)?;
         let ifd_offset = self.read_ifd_offset::<T>(reader)?;
         let ifd = self.read_IFD::<T>(reader, ifd_offset)?;
+        let image_data = self.read_image_data::<T>(reader, ifd)?;
         Ok(Box::new(()))
     }
 
@@ -180,5 +181,10 @@ impl TIFFReader {
                  ifd_entry.value_offset, ifd_entry.value);
 
         Ok(ifd_entry)
+    }
+
+    fn read_image_data<Endian: ByteOrder>(&self, reader: &mut SeekableReader,
+        idf: Box<IFD>) -> Result<Vec<Vec<Vec<u8>>>> {
+        Ok(Vec::with_capacity(3))
     }
 }

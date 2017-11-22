@@ -23,10 +23,26 @@ pub struct IFD {
     pub entries: Vec<IFDEntry>,
 }
 
+impl IFD {
+    pub fn get_image_length() -> usize {
+        3
+    }
+
+    pub fn get_image_width() -> usize {
+        3
+    }
+
+    pub fn get_bytes_per_sample() -> usize {
+        3
+    }
+}
+
 #[derive(Debug)]
 pub struct TIFF {
     header: TIFFHeader,
     ifd: HashMap<TIFFTag, TagValue>,
+    // This is width * length * bytes_per_sample.
+    image_data: Vec<Vec<Vec<u8>>>,
 }
 
 pub fn decode_tag(value: u16) -> Option<TIFFTag> {
