@@ -179,7 +179,7 @@ impl TIFFReader {
 
         // Decode the tag.
         let tag_msg = format!("Invalid tag {:04X}", tag_value);
-        let tag = decode_tag(tag_value).expect(&tag_msg);
+        let tag = decode_tag(tag_value).ok_or(Error::new(ErrorKind::InvalidData, tag_msg))?;
 
         // Decode the type.
         let tpe_msg = format!("Invalid tag type {:04X}", tpe_value);
