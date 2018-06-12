@@ -42,6 +42,7 @@ enum_from_primitive! {
     }
 }
 
+/// Helper function that returns the size of a certain tag.
 pub fn tag_size(t: &TagType) -> u32 {
     match *t {
         TagType::ByteTag           => 1,
@@ -60,6 +61,7 @@ pub fn tag_size(t: &TagType) -> u32 {
     }
 }
 
+/// All the possible values of tags.
 #[derive(Debug)]
 pub enum TagValue {
     ByteValue(BYTE),
@@ -75,6 +77,7 @@ pub enum TagValue {
     DoubleValue(DOUBLE),
 }
 
+/// The photometric interpretation of the GeoTIFF.
 #[repr(u16)]
 #[derive(Debug)]
 pub enum PhotometricInterpretation {
@@ -82,6 +85,7 @@ pub enum PhotometricInterpretation {
     BlackIsZero = 1,
 }
 
+/// The compression chosen for this TIFF.
 #[repr(u16)]
 #[derive(Debug)]
 pub enum Compression {
@@ -93,6 +97,7 @@ pub enum Compression {
     PackBits = 32773,
 }
 
+/// The resolution unit of this TIFF.
 #[repr(u16)]
 #[derive(Debug)]
 pub enum ResolutionUnit {
@@ -101,6 +106,7 @@ pub enum ResolutionUnit {
     Centimetre = 3,
 }
 
+/// The sample format of this TIFF.
 #[repr(u16)]
 #[derive(Debug)]
 pub enum SampleFormat {
@@ -110,6 +116,7 @@ pub enum SampleFormat {
     Undefined                   = 4,
 }
 
+/// The image type of this TIFF.
 #[derive(Debug)]
 pub enum ImageType {
     Bilevel,
@@ -119,6 +126,7 @@ pub enum ImageType {
     YCbCr,
 }
 
+/// The image orientation of this TIFF.
 #[repr(u16)]
 #[derive(Debug)]
 pub enum ImageOrientation {
