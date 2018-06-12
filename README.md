@@ -1,5 +1,4 @@
-A TIFF Library for Rust
-=======================
+# A TIFF Library for Rust
 
 I needed this library to import elevation models for a routing library (to be made public soon). As elevation models usually come in GeoTIFF format, but no such library was available for Rust, I created this library, taking other libraries as inspiration:
 
@@ -12,10 +11,21 @@ In its current state, it works for very basic GeoTIFFs, which sufficed to extrac
 
 
 
-Library Usage
--------------
+## Library Usage
 
-The library exposes a `TIFF` struct that can be used to open GeoTIFFs and interact with them.
+The library exposes a `TIFF` struct that can be used to open GeoTIFFs and interact with them. Its use is simple:
+
+```rust
+TIFF::open("geotiff.tif");
+```
+
+Returns an `Option`, depending if the open operation was successful or not. Individual values can then be read (for the moment, only at pixels) using:
+
+```rust
+x.get_value_at(longitude, latitude);
+```
+
+Where `longitude` corresponds to the `image_length` and `latitude` to the `image_width`. This might be a bit counter intuitive, but seems consistent with GDAL (have to look into this).
 
 
 
@@ -23,6 +33,7 @@ The library exposes a `TIFF` struct that can be used to open GeoTIFFs and intera
 
 Several documents describe the structure of a (Geo)TIFF:
 
-* The official TIFF specification:
-* The official GeoTIFF specitication: 
+* The official TIFF specification: http://download.osgeo.org/geotiff/spec/tiff6.pdf.
+* The official GeoTIFF specitication: http://download.osgeo.org/geotiff/spec/geotiff.rtf
 * The article "GeoTIFF – A standard image file format for GIS applications" by Mahammad and Ramakrishnan: https://www.geospatialworld.net/article/geotiff-a-standard-image-file-format-for-gis-applications/
+
