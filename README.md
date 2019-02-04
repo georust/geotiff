@@ -31,6 +31,14 @@ Where `longitude` corresponds to the `image_length` and `latitude` to the `image
 
 Caution: the `longitude` and `latitude` are only in pixels, no coordinate transformations are applied!
 
+## Development and Testing
+
+Simply run the tests using:
+
+```
+cargo test
+```
+
 ## TIFF Basics
 
 Several documents describe the structure of a (Geo)TIFF:
