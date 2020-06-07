@@ -40,3 +40,11 @@ fn test_load_3() {
         Err(e) => println!("File I/O Error: {:?}", e),
     }
 }
+
+#[test]
+fn test_load_4() -> Result<(), std::io::Error> {
+
+    let t = TIFF::open("resources/mapzen-geotiff-14-10348-7801.tif")?;
+
+    Ok(())
+}
