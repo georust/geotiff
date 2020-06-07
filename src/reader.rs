@@ -77,7 +77,7 @@ impl TIFFReader {
         // Bytes 4-7: offset
         // Offset from start of file to first IFD
         let ifd_offset_field = reader.read_u32::<T>()?;
-        println!("IFD offset: {:?}", ifd_offset_field);
+        //println!("IFD offset: {:?}", ifd_offset_field);
         Ok(ifd_offset_field)
     }
 
@@ -90,7 +90,7 @@ impl TIFFReader {
         // 2 byte count of IFD entries
         let entry_count = reader.read_u16::<T>()?;
 
-        println!("IFD entry count: {}", entry_count);
+        //println!("IFD entry count: {}", entry_count);
 
         let mut ifd = IFD { count: entry_count, entries: Vec::with_capacity(entry_count as usize) };
 
@@ -161,7 +161,7 @@ impl TIFFReader {
     /// decoding the tag and type, the values are retrieved.
     fn read_tag<Endian: ByteOrder>(&self, ifd_offset: u64, entry_number: usize,
                                    reader: &mut SeekableReader) -> Result<IFDEntry> {
-        println!("Reading tag at {}/{}", ifd_offset, entry_number);
+        //println!("Reading tag at {}/{}", ifd_offset, entry_number);
         // Seek beginning (as each tag is 12 bytes long).
         reader.seek(SeekFrom::Start(ifd_offset + 12 * entry_number as u64))?;
 
@@ -188,7 +188,7 @@ impl TIFFReader {
 
         // Let's get the value(s) of this tag.
         let tot_size = count_value * value_size;
-        println!("{:04X} {:04X} {:08X} {:08X} {:?} {:?} {:?} {:?}", tag_value, tpe_value,
+        //println!("{:04X} {:04X} {:08X} {:08X} {:?} {:?} {:?} {:?}", tag_value, tpe_value,
                  count_value, value_offset_value, tag, tpe, value_size, tot_size);
 
         let mut values = Vec::with_capacity(count_value as usize);
@@ -218,7 +218,7 @@ impl TIFFReader {
             value: values,
         };
 
-        println!("IFD[{:?}] tag: {:?} type: {:?} count: {} offset: {:08x} value: {:?}",
+        //println!("IFD[{:?}] tag: {:?} type: {:?} count: {} offset: {:08x} value: {:?}",
                  entry_number, ifd_entry.tag, ifd_entry.tpe, ifd_entry.count,
                  ifd_entry.value_offset, ifd_entry.value);
 
