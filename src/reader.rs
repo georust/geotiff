@@ -6,7 +6,7 @@ use num::FromPrimitive;
 use byteorder::{ReadBytesExt, ByteOrder, BigEndian, LittleEndian};
 
 use lowlevel::{TIFFByteOrder, TIFFTag, BYTE, SBYTE, SHORT, SSHORT, LONG, SLONG, FLOAT,
-               TagType, TagValue, tag_size};
+               TagType, TagValue, tag_size, Compression};
 use tiff::{TIFF, IFD, IFDEntry, decode_tag, decode_tag_type};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
@@ -231,6 +231,20 @@ impl TIFFReader {
     /// * No compression is used, i.e., CompressionTag == 1.
     fn read_image_data<Endian: ByteOrder>(&self, reader: &mut SeekableReader,
                                           ifd: &IFD) -> Result<Vec<Vec<Vec<usize>>>> {
+
+        let compression = ifd.entries.iter().find(|&e| e.tag == TIFFTag::CompressionTag)
+            .ok_or(Error::new(ErrorKind::InvalidData, "Compression Tag not found."))?;
+
+    
+        match compression.value[0] {
+            TagValue::ShortValue(v) => {
+                if v != Compression::None as u16 {
+                    return Err(Error::new(ErrorKind::InvalidData, "Compression not supported"));
+                }
+            },
+            _ => (),
+        }
+
         // Image size and depth.
         let image_length = ifd.entries.iter().find(|&e| e.tag == TIFFTag::ImageLengthTag)
             .ok_or(Error::new(ErrorKind::InvalidData, "Image length not found."))?;
@@ -239,20 +253,12 @@ impl TIFFReader {
         let image_depth = ifd.entries.iter().find(|&e| e.tag == TIFFTag::BitsPerSampleTag)
             .ok_or(Error::new(ErrorKind::InvalidData, "Image depth not found."))?;
 
-        // Storage location within the TIFF. First, lets get the number of rows per strip.
-        let rows_per_strip = ifd.entries.iter().find(|&e| e.tag == TIFFTag::RowsPerStripTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Rows per strip not found."))?;
-        // For each strip, its offset within the TIFF file.
-        let strip_offsets = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripOffsetsTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Strip offsets not found."))?;
-        let strip_byte_counts = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripByteCountsTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Strip byte counts not found."))?;
-
         // Create the output Vec.
         let image_length = match image_length.value[0] {
             TagValue::ShortValue(v) => v,
             _ => 0 as u16,
         };
+
         let image_width = match image_width.value[0] {
             TagValue::ShortValue(v) => v,
             _ => 0 as u16,
@@ -261,54 +267,156 @@ impl TIFFReader {
             TagValue::ShortValue(v) => v / 8,
             _ => 0 as u16,
         };
+
         // TODO The img Vec should optimally not be of usize, but of size "image_depth".
         let mut img: Vec<Vec<Vec<usize>>> = Vec::with_capacity(image_length as usize);
+
         for i in 0..image_length {
             &img.push(Vec::with_capacity(image_width as usize));
-            for j in 0..image_width {
+            for _j in 0..image_width {
                 &img[i as usize].push(vec![0; 1]); // TODO To be changed to take into account SamplesPerPixel!
             }
         }
+        
+        // There are two storage strategies in a TIFF, strips or tiles.
+        // See TIFF 6.0 Specification Section 15.
+        //
+        // To work out which we are using, we look for TileWidth, and if it's found, we switch to
+        // tiling strategy.
+        
+        let tile_strategy = ifd.entries.iter().find(|&e| e.tag == TIFFTag::TileWidth);
+        if tile_strategy.is_some() {
+            // Tile strategy
+            let tile_width = ifd.entries.iter().find(|&e| e.tag == TIFFTag::TileWidth)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Tile Width not found."))?;
+            let tile_length = ifd.entries.iter().find(|&e| e.tag == TIFFTag::TileWidth)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Tile Length not found."))?;
+            let tile_offsets = ifd.entries.iter().find(|&e| e.tag == TIFFTag::TileOffsets)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Tile offsets not found."))?;
+            let tile_byte_counts = ifd.entries.iter().find(|&e| e.tag == TIFFTag::TileByteCounts)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Tile Byte Countes not found."))?;
+        
+            let tile_width = match tile_width.value[0] {
+                TagValue::ShortValue(v) => v,
+                _ => 0 as u16
+            };
 
-        // Read strip after strip, and copy it into the output Vec.
-        let rows_per_strip = match rows_per_strip.value[0] {
-            TagValue::ShortValue(v) => v,
-            _ => 0 as u16,
-        };
-        let mut offsets: Vec<u32> = Vec::with_capacity(strip_offsets.value.len());
-        for v in &strip_offsets.value {
-            match v {
-                TagValue::LongValue(v) => offsets.push(*v),
-                _ => (),
+            let tile_length = match tile_length.value[0] {
+                TagValue::ShortValue(v) => v,
+                _ => 0 as u16
             };
-        }
-        let mut byte_counts: Vec<u32> = Vec::with_capacity(strip_byte_counts.value.len());
-        for v in &strip_byte_counts.value {
-            match v {
-                TagValue::LongValue(v) => byte_counts.push(*v),
-                _ => (),
-            };
-        }
-        // A bit much boilerplate, but should be okay and fast.
-        let mut curr_x = 0;
-        let mut curr_y = 0;
-        let mut curr_z = 0;
-        for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
-            reader.seek(SeekFrom::Start(*offset as u64))?;
-            for i in 0..(*byte_count / image_depth as u32) {
-                let v = self.read_n(reader, image_depth as u64);
-                // println!("x {:?} len {:?}", curr_x, img.len());
-                // println!("y {:?} wid {:?}", curr_y, img[0].len());
-                // println!("z {:?} dep {:?}", curr_z, img[0][0].len());
-                img[curr_x][curr_y][curr_z] = self.vec_to_value::<Endian>(v);
-                curr_z += 1;
-                if curr_z >= img[curr_x][curr_y].len() {
-                    curr_z = 0;
-                    curr_y += 1;
+
+            let mut offsets: Vec<u32> = Vec::with_capacity(tile_offsets.value.len());
+            for v in &tile_offsets.value {
+                match v {
+                    TagValue::LongValue(v) => offsets.push(*v),
+                    _ => (),
+                };
+            }
+            let mut byte_counts: Vec<u32> = Vec::with_capacity(tile_byte_counts.value.len());
+            for v in &tile_byte_counts.value {
+                match v {
+                    TagValue::ShortValue(v) => byte_counts.push(*v as u32),
+                    TagValue::LongValue(v) => byte_counts.push(*v),
+                    _ => (),
+                };
+            }
+
+
+            let mut tile = 0;
+            let tiles_across = (image_width + tile_width - 1) / tile_width;
+            let tiles_down = (image_length + tile_length - 1) / tile_length;
+            println!("{} x {} tiles of {} x {} ({} x {})", tiles_across, tiles_down, 
+                     tile_width, tile_length, image_width, image_length);
+
+            for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
+                reader.seek(SeekFrom::Start(*offset as u64))?;
+                // Here we have to be careful as tiles can contain padding, which is junk data
+                // that should be discarded if it exceeds the bounds of ImageWidth or
+                // ImageLength
+                let mut curr_x = ((tile % tiles_across) * tile_width) as usize;
+                let tile_min_y = ((tile / tiles_across) * tile_length) as usize;
+                let mut curr_y = tile_min_y;
+                let mut curr_z = 0usize;
+                let tile_max_x = (curr_x + tile_width as usize).min(image_width as usize);
+                let tile_max_y = (curr_y + tile_length as usize).min(image_length as usize);
+
+                println!("tile {},{},{} to {},{},", curr_x, curr_y, curr_z, tile_max_x, tile_max_y);
+                println!("bytes: {}, depth: {}", *byte_count, image_depth);
+
+                for _i in 0..(*byte_count / image_depth as u32) {
+                    let v = self.read_n(reader, image_depth as u64);
+                    img[curr_x][curr_y][curr_z] = self.vec_to_value::<Endian>(v);
+                    curr_z += 1;
+                    if curr_z >= img[curr_x][curr_y].len() { // Depth
+                        curr_z = 0;
+                        curr_y += 1;
+                    }
+                    if curr_y >= tile_max_y {
+                        curr_y = tile_min_y;
+                        curr_x += 1;
+                        println!("{} {} {}", curr_x, curr_y, curr_z);
+                    }
+                    if curr_x >= tile_max_x {
+                        println!("!!PADDING {} {} {}", curr_x, curr_y, curr_z);
+                        break;
+                    }
                 }
-                if curr_y >= img[curr_x].len() as usize {
-                    curr_y = 0;
-                    curr_x += 1;
+                tile +=1;
+            }
+
+        } else {
+            // Strip strategy
+
+            // Storage location within the TIFF. First, lets get the number of rows per strip.
+            let _rows_per_strip = ifd.entries.iter().find(|&e| e.tag == TIFFTag::RowsPerStripTag)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Rows per strip not found."))?;
+            // For each strip, its offset within the TIFF file.
+            let strip_offsets = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripOffsetsTag)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Strip offsets not found."))?;
+            let strip_byte_counts = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripByteCountsTag)
+                .ok_or(Error::new(ErrorKind::InvalidData, "Strip byte counts not found."))?;
+
+            // Read strip after strip, and copy it into the output Vec.
+            let _rows_per_strip = match _rows_per_strip.value[0] {
+                TagValue::ShortValue(v) => v,
+                _ => 0 as u16,
+            };
+            let mut offsets: Vec<u32> = Vec::with_capacity(strip_offsets.value.len());
+            for v in &strip_offsets.value {
+                match v {
+                    TagValue::LongValue(v) => offsets.push(*v),
+                    _ => (),
+                };
+            }
+            let mut byte_counts: Vec<u32> = Vec::with_capacity(strip_byte_counts.value.len());
+            for v in &strip_byte_counts.value {
+                match v {
+                    TagValue::LongValue(v) => byte_counts.push(*v),
+                    _ => (),
+                };
+            }
+            // A bit much boilerplate, but should be okay and fast.
+            let mut curr_x = 0;
+            let mut curr_y = 0;
+            let mut curr_z = 0;
+            for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
+                reader.seek(SeekFrom::Start(*offset as u64))?;
+                for _i in 0..(*byte_count / image_depth as u32) {
+                    let v = self.read_n(reader, image_depth as u64);
+                    // println!("x {:?} len {:?}", curr_x, img.len());
+                    // println!("y {:?} wid {:?}", curr_y, img[0].len());
+                    // println!("z {:?} dep {:?}", curr_z, img[0][0].len());
+                    img[curr_x][curr_y][curr_z] = self.vec_to_value::<Endian>(v);
+                    curr_z += 1;
+                    if curr_z >= img[curr_x][curr_y].len() {
+                        curr_z = 0;
+                        curr_y += 1;
+                    }
+                    if curr_y >= img[curr_x].len() as usize {
+                        curr_y = 0;
+                        curr_x += 1;
+                    }
                 }
             }
         }

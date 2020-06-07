@@ -224,6 +224,10 @@ enum_from_primitive! {
         // Extension TIFF Tags
         // See http://www.awaresystems.be/imaging/tiff/tifftags/extension.html
         XMPTag                       = 0x02bc,
+        TileWidth                    = 0x0142,
+        TileLength                   = 0x0143,
+        TileOffsets                  = 0x0144,
+        TileByteCounts               = 0x0145,
 
         // Private Tags
         PhotoshopTag                 = 0x8649,
