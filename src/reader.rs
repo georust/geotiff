@@ -189,7 +189,7 @@ impl TIFFReader {
         // Let's get the value(s) of this tag.
         let tot_size = count_value * value_size;
         //println!("{:04X} {:04X} {:08X} {:08X} {:?} {:?} {:?} {:?}", tag_value, tpe_value,
-                 count_value, value_offset_value, tag, tpe, value_size, tot_size);
+        //        count_value, value_offset_value, tag, tpe, value_size, tot_size);
 
         let mut values = Vec::with_capacity(count_value as usize);
         if tot_size <= 4 {
@@ -219,8 +219,8 @@ impl TIFFReader {
         };
 
         //println!("IFD[{:?}] tag: {:?} type: {:?} count: {} offset: {:08x} value: {:?}",
-                 entry_number, ifd_entry.tag, ifd_entry.tpe, ifd_entry.count,
-                 ifd_entry.value_offset, ifd_entry.value);
+        //         entry_number, ifd_entry.tag, ifd_entry.tpe, ifd_entry.count,
+        //         ifd_entry.value_offset, ifd_entry.value);
 
         Ok(ifd_entry)
     }
