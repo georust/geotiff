@@ -30,6 +30,12 @@ impl TIFF {
         tiff_reader.load(filename)
     }
 
+    /// Read from an open file
+    pub fn read(&self, reader: &mut SeekableReader) -> Result<Box<TIFF>> {
+        let tiff_reader = TIFFReader;
+        tiff_reader.read(reader)
+    }
+
     /// Gets the value at a given coordinate (in pixels).
     pub fn get_value_at(&self, lon: usize, lat: usize) -> usize {
         self.image_data[lon][lat][0]
