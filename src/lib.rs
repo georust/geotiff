@@ -31,7 +31,7 @@ impl TIFF {
     }
 
     /// Read from an open file
-    pub fn read(&self, reader: &mut SeekableReader) -> Result<Box<TIFF>> {
+    pub fn read(reader: &mut SeekableReader) -> Result<Box<TIFF>> {
         let tiff_reader = TIFFReader;
         tiff_reader.read(reader)
     }
