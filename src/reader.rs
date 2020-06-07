@@ -3,9 +3,11 @@ use std::path::Path;
 use std::fs::File;
 use num::FromPrimitive;
 
+use miniz_oxide::inflate::decompress_to_vec_zlib;
+
 use byteorder::{ReadBytesExt, ByteOrder, BigEndian, LittleEndian};
 
-use lowlevel::{TIFFByteOrder, TIFFTag, BYTE, SBYTE, SHORT, SSHORT, LONG, SLONG, FLOAT,
+use lowlevel::{TIFFByteOrder, TIFFTag,
                TagType, TagValue, tag_size, Compression};
 use tiff::{TIFF, IFD, IFDEntry, decode_tag, decode_tag_type};
 
@@ -29,7 +31,7 @@ impl TIFFReader {
     }
 
     /// Reads the `.tiff` file, starting with the byte order.
-    pub fn read(&self, reader: &mut SeekableReader) -> Result<Box<TIFF>> {
+    pub fn read(&self, reader: &mut dyn SeekableReader) -> Result<Box<TIFF>> {
         match self.read_byte_order(reader)? {
             TIFFByteOrder::LittleEndian => self.read_tiff::<LittleEndian>(reader),
             TIFFByteOrder::BigEndian => self.read_tiff::<BigEndian>(reader),
@@ -37,7 +39,7 @@ impl TIFFReader {
     }
 
     /// Helper function to read the byte order, one of `LittleEndian` or `BigEndian`.
-    pub fn read_byte_order(&self, reader: &mut SeekableReader) -> Result<TIFFByteOrder> {
+    pub fn read_byte_order(&self, reader: &mut dyn SeekableReader) -> Result<TIFFByteOrder> {
         // Bytes 0-1: "II" or "MM"
         // Read and validate ByteOrder
         match TIFFByteOrder::from_u16(reader.read_u16::<LittleEndian>()?) {
@@ -51,7 +53,7 @@ impl TIFFReader {
     ///
     /// This starts by reading the magic number, the IFD offset, the IFDs themselves, and finally,
     /// the image data.
-    fn read_tiff<T: ByteOrder>(&self, reader: &mut SeekableReader) -> Result<Box<TIFF>> {
+    fn read_tiff<T: ByteOrder>(&self, reader: &mut dyn SeekableReader) -> Result<Box<TIFF>> {
         self.read_magic::<T>(reader)?;
         let ifd_offset = self.read_ifd_offset::<T>(reader)?;
         let ifd = self.read_IFD::<T>(reader, ifd_offset)?;
@@ -63,7 +65,7 @@ impl TIFFReader {
     }
 
     /// Reads the magic number, i.e., 42.
-    fn read_magic<T: ByteOrder>(&self, reader: &mut SeekableReader) -> Result<()> {
+    fn read_magic<T: ByteOrder>(&self, reader: &mut dyn SeekableReader) -> Result<()> {
         // Bytes 2-3: 0042
         // Read and validate HeaderMagic
         match reader.read_u16::<T>()? {
@@ -73,7 +75,7 @@ impl TIFFReader {
     }
 
     /// Reads the IFD offset. The first IFD is then read from this position.
-    pub fn read_ifd_offset<T: ByteOrder>(&self, reader: &mut SeekableReader) -> Result<u32> {
+    pub fn read_ifd_offset<T: ByteOrder>(&self, reader: &mut dyn SeekableReader) -> Result<u32> {
         // Bytes 4-7: offset
         // Offset from start of file to first IFD
         let ifd_offset_field = reader.read_u32::<T>()?;
@@ -85,7 +87,7 @@ impl TIFFReader {
     ///
     /// This starts by reading the number of entries, and then the tags within each entry.
     #[allow(non_snake_case)]
-    fn read_IFD<T: ByteOrder>(&self, reader: &mut SeekableReader, ifd_offset: u32) -> Result<IFD> {
+    fn read_IFD<T: ByteOrder>(&self, reader: &mut dyn SeekableReader, ifd_offset: u32) -> Result<IFD> {
         reader.seek(SeekFrom::Start(ifd_offset as u64))?;
         // 2 byte count of IFD entries
         let entry_count = reader.read_u16::<T>()?;
@@ -106,7 +108,7 @@ impl TIFFReader {
     }
 
     /// Reads `n` bytes from a reader into a Vec<u8>.
-    fn read_n(&self, reader: &mut SeekableReader, bytes_to_read: u64) -> Vec<u8> {
+    fn read_n(&self, reader: &mut dyn SeekableReader, bytes_to_read: u64) -> Vec<u8> {
         let mut buf = Vec::with_capacity(bytes_to_read as usize);
         let mut chunk = reader.take(bytes_to_read);
         let status = chunk.read_to_end(&mut buf);
@@ -160,7 +162,7 @@ impl TIFFReader {
     /// This consists of reading the tag ID, field type, number of values, offset to values. After
     /// decoding the tag and type, the values are retrieved.
     fn read_tag<Endian: ByteOrder>(&self, ifd_offset: u64, entry_number: usize,
-                                   reader: &mut SeekableReader) -> Result<IFDEntry> {
+                                   reader: &mut dyn SeekableReader) -> Result<IFDEntry> {
         //println!("Reading tag at {}/{}", ifd_offset, entry_number);
         // Seek beginning (as each tag is 12 bytes long).
         reader.seek(SeekFrom::Start(ifd_offset + 12 * entry_number as u64))?;
@@ -229,7 +231,7 @@ impl TIFFReader {
     ///
     /// As for now, the following assumptions are made:
     /// * No compression is used, i.e., CompressionTag == 1.
-    fn read_image_data<Endian: ByteOrder>(&self, reader: &mut SeekableReader,
+    fn read_image_data<Endian: ByteOrder>(&self, reader: &mut dyn SeekableReader,
                                           ifd: &IFD) -> Result<Vec<Vec<Vec<usize>>>> {
 
         let compression = ifd.entries.iter().find(|&e| e.tag == TIFFTag::CompressionTag)
@@ -239,6 +241,7 @@ impl TIFFReader {
         match compression.value[0] {
             TagValue::ShortValue(v) => {
                 if v != Compression::None as u16 {
+                    println!("Compression: {}", v);
                     return Err(Error::new(ErrorKind::InvalidData, "Compression not supported"));
                 }
             },

@@ -2,12 +2,8 @@ extern crate byteorder;
 #[macro_use]
 extern crate enum_primitive;
 extern crate num;
+extern crate miniz_oxide;
 
-use num::FromPrimitive;
-
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
-use std::io::{Read, Seek};
-use std::collections::{HashMap, HashSet};
 use std::io::Result;
 use std::fmt;
 
@@ -15,7 +11,6 @@ mod lowlevel;
 mod reader;
 pub mod tiff;
 
-use tiff::*;
 use reader::*;
 pub use tiff::TIFF;
 
@@ -31,7 +26,7 @@ impl TIFF {
     }
 
     /// Read from an open file
-    pub fn read(reader: &mut SeekableReader) -> Result<Box<TIFF>> {
+    pub fn read(reader: &mut dyn SeekableReader) -> Result<Box<TIFF>> {
         let tiff_reader = TIFFReader;
         tiff_reader.read(reader)
     }

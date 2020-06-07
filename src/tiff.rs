@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use enum_primitive::FromPrimitive;
 use lowlevel::*;
 

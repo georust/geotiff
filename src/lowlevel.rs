@@ -94,6 +94,7 @@ pub enum Compression {
     LZW      = 5,
     OJPEG    = 6,
     JPEG     = 7,
+    AdobeDeflate = 8,
     PackBits = 32773,
 }
 
