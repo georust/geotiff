@@ -57,7 +57,7 @@ pub fn tag_size(t: &TagType) -> u32 {
         TagType::SignedRationalTag => 8,
         TagType::FloatTag          => 4,
         TagType::DoubleTag         => 8,
-        _                          => 0,
+        //_                          => 0,
     }
 }
 
@@ -85,17 +85,19 @@ pub enum PhotometricInterpretation {
     BlackIsZero = 1,
 }
 
-/// The compression chosen for this TIFF.
-#[repr(u16)]
-#[derive(Debug)]
-pub enum Compression {
-    None     = 1,
-    Huffman  = 2,
-    LZW      = 5,
-    OJPEG    = 6,
-    JPEG     = 7,
-    AdobeDeflate = 8,
-    PackBits = 32773,
+// The compression chosen for this TIFF.
+enum_from_primitive! {
+    #[repr(u16)]
+    #[derive(Debug)]
+    pub enum Compression {
+        None     = 1,
+        Huffman  = 2,
+        LZW      = 5,
+        OJPEG    = 6,
+        JPEG     = 7,
+        AdobeDeflate = 8,
+        PackBits = 32773,
+    }
 }
 
 /// The resolution unit of this TIFF.

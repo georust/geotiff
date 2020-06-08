@@ -139,7 +139,7 @@ impl TIFFReader {
             &TagType::FloatTag => TagValue::FloatValue(Endian::read_f32(&vec[..])),
             &TagType::DoubleTag => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
             &TagType::UndefinedTag => TagValue::ByteValue(0),
-            _ => panic!("Tag not found!"),
+            //_ => panic!("Tag not found!"),
         }
     }
 
@@ -226,27 +226,63 @@ impl TIFFReader {
 
         Ok(ifd_entry)
     }
+    
+    fn read_block_data<Endian: ByteOrder>(&self,
+                                          reader: &mut dyn SeekableReader,
+                                          offset: &u32,
+                                          byte_count: &u32,
+                                          block_size: usize,
+                                          image_depth: usize,
+                                          compression: Compression
+                                          ) -> Result<Vec<usize>> {
+
+        reader.seek(SeekFrom::Start(*offset as u64))?;
+        let mut decompressed = vec![0u8; block_size * image_depth];
+
+        match compression {
+            Compression::None => {
+                if block_size * image_depth == *byte_count as usize {
+                    // This should be the normal condition
+                    reader.read_exact(&mut decompressed)?;
+                } else {
+                    println!("{}x{} = {} --  {}", block_size, image_depth, block_size * image_depth, byte_count);
+                    // This can happen at the end of a stripped image  
+                    // TODO
+                }
+            },
+            Compression::AdobeDeflate => {
+                let mut compressed = vec![0u8; *byte_count as usize];
+                reader.read_exact(&mut compressed)?;
+                decompressed.extend(decompress_to_vec_zlib(&compressed).expect("DEFLATE failed to decompress data."));
+            },
+            _ => {
+                println!("Compression: {:?}", compression);
+                return Err(Error::new(ErrorKind::InvalidData, "Compression not supported"));
+            }
+        
+        }
+
+        let mut elevations = vec![0usize; block_size]; 
+
+        for i in 0..block_size {
+            let v = &decompressed[i*image_depth..i*image_depth+image_depth]; // Take image_depth bytes
+            elevations[i] = self.vec_to_value::<Endian>(v.to_vec());
+        }
+        
+        Ok(elevations)
+    }
+
 
     /// Reads the image data into a 3D-Vec<u8>.
-    ///
-    /// As for now, the following assumptions are made:
-    /// * No compression is used, i.e., CompressionTag == 1.
     fn read_image_data<Endian: ByteOrder>(&self, reader: &mut dyn SeekableReader,
                                           ifd: &IFD) -> Result<Vec<Vec<Vec<usize>>>> {
 
         let compression = ifd.entries.iter().find(|&e| e.tag == TIFFTag::CompressionTag)
             .ok_or(Error::new(ErrorKind::InvalidData, "Compression Tag not found."))?;
-
-    
-        match compression.value[0] {
-            TagValue::ShortValue(v) => {
-                if v != Compression::None as u16 {
-                    println!("Compression: {}", v);
-                    return Err(Error::new(ErrorKind::InvalidData, "Compression not supported"));
-                }
-            },
-            _ => (),
-        }
+        let compression = match compression.value[0] {
+            TagValue::ShortValue(v) => v,
+            _ => 0,
+        };
 
         // Image size and depth.
         let image_length = ifd.entries.iter().find(|&e| e.tag == TIFFTag::ImageLengthTag)
@@ -333,6 +369,12 @@ impl TIFFReader {
                      tile_width, tile_length, image_width, image_length);
 
             for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
+                self.read_block_data::<Endian>(
+                    reader, offset, byte_count,
+                    tile_width as usize * tile_length as usize,
+                    image_depth as usize,
+                    Compression::from_u16(compression).unwrap()); 
+                /*
                 reader.seek(SeekFrom::Start(*offset as u64))?;
                 // Here we have to be careful as tiles can contain padding, which is junk data
                 // that should be discarded if it exceeds the bounds of ImageWidth or
@@ -365,6 +407,7 @@ impl TIFFReader {
                         break;
                     }
                 }
+                */
                 tile +=1;
             }
 
@@ -381,7 +424,7 @@ impl TIFFReader {
                 .ok_or(Error::new(ErrorKind::InvalidData, "Strip byte counts not found."))?;
 
             // Read strip after strip, and copy it into the output Vec.
-            let _rows_per_strip = match _rows_per_strip.value[0] {
+            let rows_per_strip = match _rows_per_strip.value[0] {
                 TagValue::ShortValue(v) => v,
                 _ => 0 as u16,
             };
@@ -399,23 +442,19 @@ impl TIFFReader {
                     _ => (),
                 };
             }
-            // A bit much boilerplate, but should be okay and fast.
+
             let mut curr_x = 0;
             let mut curr_y = 0;
-            let mut curr_z = 0;
             for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
-                reader.seek(SeekFrom::Start(*offset as u64))?;
-                for _i in 0..(*byte_count / image_depth as u32) {
-                    let v = self.read_n(reader, image_depth as u64);
-                    // println!("x {:?} len {:?}", curr_x, img.len());
-                    // println!("y {:?} wid {:?}", curr_y, img[0].len());
-                    // println!("z {:?} dep {:?}", curr_z, img[0][0].len());
-                    img[curr_x][curr_y][curr_z] = self.vec_to_value::<Endian>(v);
-                    curr_z += 1;
-                    if curr_z >= img[curr_x][curr_y].len() {
-                        curr_z = 0;
-                        curr_y += 1;
-                    }
+                let strip = self.read_block_data::<Endian>(
+                    reader, offset, byte_count,
+                    rows_per_strip as usize * image_width as usize,
+                    image_depth as usize,
+                    Compression::from_u16(compression).unwrap())?; 
+
+                for v in strip {
+                    img[curr_x][curr_y][0] = v;
+                    curr_y += 1;
                     if curr_y >= img[curr_x].len() as usize {
                         curr_y = 0;
                         curr_x += 1;
