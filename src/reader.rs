@@ -241,19 +241,27 @@ impl TIFFReader {
 
         match compression {
             Compression::None => {
-                if block_size * image_depth == *byte_count as usize {
-                    // This should be the normal condition
-                    reader.read_exact(&mut decompressed)?;
-                } else {
-                    println!("{}x{} = {} --  {}", block_size, image_depth, block_size * image_depth, byte_count);
-                    // This can happen at the end of a stripped image  
-                    // TODO
+                // Normally the byte_count should equal the block_size * image_depth.
+                // 
+                // However at the end of a stripped image, we can have a truncated buffer:
+                //
+                // See per spec: "For example, if ImageLength is 24, and RowsPerStrip is 10,
+                // then there are 3strips, with 10 rows in the first strip, 10 rows in the
+                // second strip, and 4 rows in thethird strip. (The data in the last strip is
+                // not padded with 6 extra rows of dummydata.)"
+                //
+                // In this case we need to resize the buffer, and as in the decompressed case
+                // the byte_count is equal to the length:
+                if block_size * image_depth != *byte_count as usize {
+                    decompressed.resize(*byte_count as usize, 0);
                 }
+
+                reader.read_exact(&mut decompressed)?;
             },
             Compression::AdobeDeflate => {
                 let mut compressed = vec![0u8; *byte_count as usize];
                 reader.read_exact(&mut compressed)?;
-                decompressed.extend(decompress_to_vec_zlib(&compressed).expect("DEFLATE failed to decompress data."));
+                decompressed = decompress_to_vec_zlib(&compressed).expect("DEFLATE failed to decompress data.");
             },
             _ => {
                 println!("Compression: {:?}", compression);
@@ -262,10 +270,9 @@ impl TIFFReader {
         
         }
 
-        let mut elevations = vec![0usize; block_size]; 
+        let mut elevations = vec![0usize; decompressed.len() / image_depth]; 
 
-        for i in 0..block_size {
-            let v = &decompressed[i*image_depth..i*image_depth+image_depth]; // Take image_depth bytes
+        for (i, v) in decompressed.chunks(image_depth).enumerate() {
             elevations[i] = self.vec_to_value::<Endian>(v.to_vec());
         }
         
@@ -369,45 +376,37 @@ impl TIFFReader {
                      tile_width, tile_length, image_width, image_length);
 
             for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
-                self.read_block_data::<Endian>(
+                let block = self.read_block_data::<Endian>(
                     reader, offset, byte_count,
                     tile_width as usize * tile_length as usize,
                     image_depth as usize,
-                    Compression::from_u16(compression).unwrap()); 
-                /*
-                reader.seek(SeekFrom::Start(*offset as u64))?;
+                    Compression::from_u16(compression).unwrap())?; 
                 // Here we have to be careful as tiles can contain padding, which is junk data
                 // that should be discarded if it exceeds the bounds of ImageWidth or
                 // ImageLength
                 let mut curr_x = ((tile % tiles_across) * tile_width) as usize;
                 let tile_min_y = ((tile / tiles_across) * tile_length) as usize;
                 let mut curr_y = tile_min_y;
-                let mut curr_z = 0usize;
                 let tile_max_x = (curr_x + tile_width as usize).min(image_width as usize);
                 let tile_max_y = (curr_y + tile_length as usize).min(image_length as usize);
 
-                println!("tile {},{},{} to {},{},", curr_x, curr_y, curr_z, tile_max_x, tile_max_y);
-                println!("bytes: {}, depth: {}", *byte_count, image_depth);
+                println!("tile {},{} to {},{},", curr_x, curr_y, tile_max_x, tile_max_y);
+                println!("bytes: {}, depth: {}, {}", *byte_count, image_depth, block.len());
 
-                for _i in 0..(*byte_count / image_depth as u32) {
-                    let v = self.read_n(reader, image_depth as u64);
-                    img[curr_x][curr_y][curr_z] = self.vec_to_value::<Endian>(v);
-                    curr_z += 1;
-                    if curr_z >= img[curr_x][curr_y].len() { // Depth
-                        curr_z = 0;
-                        curr_y += 1;
-                    }
+                for v in block {
+                    img[curr_x][curr_y][0] = v;
+                    curr_y += 1;
                     if curr_y >= tile_max_y {
                         curr_y = tile_min_y;
                         curr_x += 1;
-                        println!("{} {} {}", curr_x, curr_y, curr_z);
+                        //println!("{} {}", curr_x, curr_y);
                     }
                     if curr_x >= tile_max_x {
-                        println!("!!PADDING {} {} {}", curr_x, curr_y, curr_z);
-                        break;
+                        // This is padding.
+                        //println!("!!PADDING {} {} {}", curr_x, curr_y, tile_max_x);
+                        //break;
                     }
                 }
-                */
                 tile +=1;
             }
 
