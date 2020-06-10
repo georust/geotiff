@@ -10,7 +10,7 @@ use lowlevel::*;
 pub struct TIFF {
     pub ifds: Vec<IFD>,
     // This is width * length * bytes_per_sample.
-    pub image_data: Vec<Vec<Vec<usize>>>,
+    pub image_data: Vec<Vec<Vec<f64>>>,
 }
 
 /// The header of a TIFF file. This comes first in any TIFF file and contains the byte order

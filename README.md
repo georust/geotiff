@@ -29,6 +29,9 @@ x.get_value_at(longitude, latitude);
 
 Where `longitude` corresponds to the `image_length` and `latitude` to the `image_width`. This might be a bit counter intuitive, but seems consistent with GDAL (have to look into this).
 
+NB: GeoTiff files can encode data as integers, or as floating point values - for
+simplicity we represent both as f64 values.
+
 Caution: the `longitude` and `latitude` are only in pixels, no coordinate transformations are applied!
 
 ## Development and Testing

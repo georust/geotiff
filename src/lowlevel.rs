@@ -109,7 +109,8 @@ pub enum ResolutionUnit {
     Centimetre = 3,
 }
 
-/// The sample format of this TIFF.
+// The sample format of this TIFF.
+enum_from_primitive! {
 #[repr(u16)]
 #[derive(Debug)]
 pub enum SampleFormat {
@@ -117,6 +118,7 @@ pub enum SampleFormat {
     TwosComplementSignedInteger = 2,
     IEEEFloatingPoint           = 3,
     Undefined                   = 4,
+}
 }
 
 /// The image type of this TIFF.

@@ -8,7 +8,7 @@ use miniz_oxide::inflate::decompress_to_vec_zlib;
 use byteorder::{ReadBytesExt, ByteOrder, BigEndian, LittleEndian};
 
 use lowlevel::{TIFFByteOrder, TIFFTag,
-               TagType, TagValue, tag_size, Compression};
+               TagType, TagValue, tag_size, Compression, SampleFormat};
 use tiff::{TIFF, IFD, IFDEntry, decode_tag, decode_tag_type};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
@@ -157,6 +157,17 @@ impl TIFFReader {
         }
     }
 
+    fn vec_to_f64_value<Endian: ByteOrder>(&self, vec: Vec<u8>) -> f64 {
+        let len = vec.len();
+        match len {
+            0 => 0 as f64,
+            1 => vec[0] as f64,
+            4 => Endian::read_f32(&vec[..]) as f64,
+            8 => Endian::read_f64(&vec[..]) as f64,
+            _ => panic!("Vector has wrong number of elements!"),
+        }
+    }
+
     /// Reads a single tag (given an IFD offset) into an IFDEntry.
     ///
     /// This consists of reading the tag ID, field type, number of values, offset to values. After
@@ -233,8 +244,9 @@ impl TIFFReader {
                                           byte_count: &u32,
                                           block_size: usize,
                                           image_depth: usize,
-                                          compression: Compression
-                                          ) -> Result<Vec<usize>> {
+                                          compression: Compression,
+                                          sample_format: &SampleFormat
+                                          ) -> Result<Vec<f64>> {
 
         reader.seek(SeekFrom::Start(*offset as u64))?;
         let mut decompressed = vec![0u8; block_size * image_depth];
@@ -270,10 +282,16 @@ impl TIFFReader {
         
         }
 
-        let mut elevations = vec![0usize; decompressed.len() / image_depth]; 
+        let mut elevations = vec![0.0; decompressed.len() / image_depth]; 
 
+        println!("Bits Per Sample: {}", image_depth);
         for (i, v) in decompressed.chunks(image_depth).enumerate() {
-            elevations[i] = self.vec_to_int_value::<Endian>(v.to_vec());
+            match sample_format {
+               SampleFormat::UnsignedInteger => { elevations[i] = self.vec_to_int_value::<Endian>(v.to_vec()) as f64; },
+               SampleFormat::TwosComplementSignedInteger => { elevations[i] = self.vec_to_int_value::<Endian>(v.to_vec()) as f64; },
+               SampleFormat::IEEEFloatingPoint => { elevations[i] = self.vec_to_f64_value::<Endian>(v.to_vec()); },
+               SampleFormat::Undefined => { return Err(Error::new(ErrorKind::InvalidData, "SampleFormat is undefined"))},
+            }
         }
         
         Ok(elevations)
@@ -282,7 +300,7 @@ impl TIFFReader {
 
     /// Reads the image data into a 3D-Vec<u8>.
     fn read_image_data<Endian: ByteOrder>(&self, reader: &mut dyn SeekableReader,
-                                          ifd: &IFD) -> Result<Vec<Vec<Vec<usize>>>> {
+                                          ifd: &IFD) -> Result<Vec<Vec<Vec<f64>>>> {
 
         let compression = ifd.entries.iter().find(|&e| e.tag == TIFFTag::CompressionTag)
             .ok_or(Error::new(ErrorKind::InvalidData, "Compression Tag not found."))?;
@@ -314,13 +332,20 @@ impl TIFFReader {
             _ => 0 as u16,
         };
 
-        // TODO The img Vec should optimally not be of usize, but of size "image_depth".
-        let mut img: Vec<Vec<Vec<usize>>> = Vec::with_capacity(image_length as usize);
+        let sample_format = ifd.entries.iter().find(|&e| e.tag == TIFFTag::SampleFormatTag)
+            .ok_or(Error::new(ErrorKind::InvalidData, "SampleFormat not found."))?;
+
+        let sample_format = match sample_format.value[0] {
+            TagValue::ShortValue(v) => FromPrimitive::from_u16(v).unwrap(),
+            _ => SampleFormat::Undefined,
+        };
+
+        let mut img: Vec<Vec<Vec<f64>>> = Vec::with_capacity(image_length as usize);
 
         for i in 0..image_length {
             &img.push(Vec::with_capacity(image_width as usize));
             for _j in 0..image_width {
-                &img[i as usize].push(vec![0; 1]); // TODO To be changed to take into account SamplesPerPixel!
+                &img[i as usize].push(vec![0.0; 1]); // TODO To be changed to take into account SamplesPerPixel!
             }
         }
         
@@ -368,6 +393,7 @@ impl TIFFReader {
                 };
             }
 
+        
 
             let mut tile = 0;
             let tiles_across = (image_width + tile_width - 1) / tile_width;
@@ -380,7 +406,8 @@ impl TIFFReader {
                     reader, offset, byte_count,
                     tile_width as usize * tile_length as usize,
                     image_depth as usize,
-                    Compression::from_u16(compression).unwrap())?; 
+                    Compression::from_u16(compression).unwrap(),
+                    &sample_format)?; 
                 // Here we have to be careful as tiles can contain padding, which is junk data
                 // that should be discarded if it exceeds the bounds of ImageWidth or
                 // ImageLength
@@ -395,7 +422,7 @@ impl TIFFReader {
 
                 for v in block {
                     img[curr_x][curr_y][0] = v;
-                    println!("{} {} -> {}", curr_x, curr_y, v);
+                    //println!("{} {} -> {}", curr_x, curr_y, v);
                     curr_y += 1;
                     if curr_y >= tile_max_y {
                         curr_y = tile_min_y;
@@ -449,7 +476,8 @@ impl TIFFReader {
                     reader, offset, byte_count,
                     rows_per_strip as usize * image_width as usize,
                     image_depth as usize,
-                    Compression::from_u16(compression).unwrap())?; 
+                    Compression::from_u16(compression).unwrap(),
+                    &sample_format)?; 
 
                 for v in strip {
                     img[curr_x][curr_y][0] = v;

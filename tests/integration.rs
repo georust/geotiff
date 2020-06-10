@@ -17,9 +17,9 @@ fn test_load_2() -> Result<(), std::io::Error> {
     assert_eq!(x.image_data.len(), 366);
     assert_eq!(x.image_data[0].len(), 399);
 
-    assert_eq!(x.get_value_at(0, 0), 551);
-    assert_eq!(x.get_value_at(45, 67), 530);
-    assert_eq!(x.get_value_at(142, 325), 587);
+    assert_eq!(x.get_value_at(0, 0).round() as usize, 551);
+    assert_eq!(x.get_value_at(45, 67).round() as usize, 530);
+    assert_eq!(x.get_value_at(142, 325).round() as usize, 587);
     Ok(())
 }
 
@@ -47,7 +47,7 @@ fn test_load_4() -> Result<(), std::io::Error> {
     assert_eq!(t.image_data[0].len(), 512);
     //println!("{:?}", t);
 
-    assert_eq!(t.get_value_at(0,0), 467);
+    assert_eq!(t.get_value_at(0,0).round() as usize, 467);
 
     Ok(())
 }

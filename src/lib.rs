@@ -32,7 +32,7 @@ impl TIFF {
     }
 
     /// Gets the value at a given coordinate (in pixels).
-    pub fn get_value_at(&self, lon: usize, lat: usize) -> usize {
+    pub fn get_value_at(&self, lon: usize, lat: usize) -> f64 {
         self.image_data[lon][lat][0]
     }
 }
