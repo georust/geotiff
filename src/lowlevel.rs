@@ -57,7 +57,7 @@ pub fn tag_size(t: &TagType) -> u32 {
         TagType::SignedRationalTag => 8,
         TagType::FloatTag          => 4,
         TagType::DoubleTag         => 8,
-        _                          => 0,
+        //_                          => 0,
     }
 }
 
@@ -85,16 +85,19 @@ pub enum PhotometricInterpretation {
     BlackIsZero = 1,
 }
 
-/// The compression chosen for this TIFF.
-#[repr(u16)]
-#[derive(Debug)]
-pub enum Compression {
-    None     = 1,
-    Huffman  = 2,
-    LZW      = 5,
-    OJPEG    = 6,
-    JPEG     = 7,
-    PackBits = 32773,
+// The compression chosen for this TIFF.
+enum_from_primitive! {
+    #[repr(u16)]
+    #[derive(Debug)]
+    pub enum Compression {
+        None     = 1,
+        Huffman  = 2,
+        LZW      = 5,
+        OJPEG    = 6,
+        JPEG     = 7,
+        AdobeDeflate = 8,
+        PackBits = 32773,
+    }
 }
 
 /// The resolution unit of this TIFF.
@@ -106,7 +109,8 @@ pub enum ResolutionUnit {
     Centimetre = 3,
 }
 
-/// The sample format of this TIFF.
+// The sample format of this TIFF.
+enum_from_primitive! {
 #[repr(u16)]
 #[derive(Debug)]
 pub enum SampleFormat {
@@ -114,6 +118,7 @@ pub enum SampleFormat {
     TwosComplementSignedInteger = 2,
     IEEEFloatingPoint           = 3,
     Undefined                   = 4,
+}
 }
 
 /// The image type of this TIFF.
@@ -224,6 +229,10 @@ enum_from_primitive! {
         // Extension TIFF Tags
         // See http://www.awaresystems.be/imaging/tiff/tifftags/extension.html
         XMPTag                       = 0x02bc,
+        TileWidth                    = 0x0142,
+        TileLength                   = 0x0143,
+        TileOffsets                  = 0x0144,
+        TileByteCounts               = 0x0145,
 
         // Private Tags
         PhotoshopTag                 = 0x8649,
