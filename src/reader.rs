@@ -283,8 +283,6 @@ impl TIFFReader {
         }
 
         let mut elevations = vec![0.0; decompressed.len() / image_depth]; 
-
-        println!("Bits Per Sample: {}", image_depth);
         for (i, v) in decompressed.chunks(image_depth).enumerate() {
             match sample_format {
                SampleFormat::UnsignedInteger => { elevations[i] = self.vec_to_int_value::<Endian>(v.to_vec()) as f64; },
@@ -397,9 +395,9 @@ impl TIFFReader {
 
             let mut tile = 0;
             let tiles_across = (image_width + tile_width - 1) / tile_width;
-            let tiles_down = (image_length + tile_length - 1) / tile_length;
-            println!("{} x {} tiles of {} x {} ({} x {})", tiles_across, tiles_down, 
-                     tile_width, tile_length, image_width, image_length);
+            let _tiles_down = (image_length + tile_length - 1) / tile_length;
+            //println!("{} x {} tiles of {} x {} ({} x {})", tiles_across, tiles_down, 
+            //         tile_width, tile_length, image_width, image_length);
 
             for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
                 let block = self.read_block_data::<Endian>(
@@ -417,8 +415,8 @@ impl TIFFReader {
                 let tile_max_x = (curr_x + tile_width as usize).min(image_width as usize);
                 let tile_max_y = (curr_y + tile_length as usize).min(image_length as usize);
 
-                println!("tile {},{} to {},{},", curr_x, curr_y, tile_max_x, tile_max_y);
-                println!("bytes: {}, depth: {}, {}", *byte_count, image_depth, block.len());
+                //println!("tile {},{} to {},{},", curr_x, curr_y, tile_max_x, tile_max_y);
+                //println!("bytes: {}, depth: {}, {}", *byte_count, image_depth, block.len());
 
                 for v in block {
                     img[curr_x][curr_y][0] = v;
