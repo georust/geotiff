@@ -145,7 +145,7 @@ impl TIFFReader {
 
     /// Converts a number of u8 values to a usize value. This doesn't check if usize is at least
     /// u64, so be careful with large values.
-    fn vec_to_value<Endian: ByteOrder>(&self, vec: Vec<u8>) -> usize {
+    fn vec_to_int_value<Endian: ByteOrder>(&self, vec: Vec<u8>) -> usize {
         let len = vec.len();
         match len {
             0 => 0 as usize,
@@ -273,7 +273,7 @@ impl TIFFReader {
         let mut elevations = vec![0usize; decompressed.len() / image_depth]; 
 
         for (i, v) in decompressed.chunks(image_depth).enumerate() {
-            elevations[i] = self.vec_to_value::<Endian>(v.to_vec());
+            elevations[i] = self.vec_to_int_value::<Endian>(v.to_vec());
         }
         
         Ok(elevations)
@@ -395,11 +395,11 @@ impl TIFFReader {
 
                 for v in block {
                     img[curr_x][curr_y][0] = v;
+                    println!("{} {} -> {}", curr_x, curr_y, v);
                     curr_y += 1;
                     if curr_y >= tile_max_y {
                         curr_y = tile_min_y;
                         curr_x += 1;
-                        //println!("{} {}", curr_x, curr_y);
                     }
                     if curr_x >= tile_max_x {
                         // This is padding.

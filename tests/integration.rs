@@ -42,9 +42,12 @@ fn test_load_3() {
 
 #[test]
 fn test_load_4() -> Result<(), std::io::Error> {
-
     let t = TIFF::open("resources/mapzen-geotiff-14-10348-7801.tif")?;
-    assert_eq!(t.get_value_at(0,0), 1);
+    assert_eq!(t.image_data.len(), 512);
+    assert_eq!(t.image_data[0].len(), 512);
+    //println!("{:?}", t);
+
+    assert_eq!(t.get_value_at(0,0), 467);
 
     Ok(())
 }
