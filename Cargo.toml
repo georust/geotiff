@@ -1,7 +1,8 @@
 [package]
-name = "rust_geotiff"
+name = "geotiff"
 version = "0.0.1"
 authors = ["Dominik Bucher <dobucher@ethz.ch>"]
+repository = "https://github.com/georust/geotiff"
 
 [dependencies]
 byteorder = "*"

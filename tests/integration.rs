@@ -1,4 +1,4 @@
-extern crate rust_geotiff as tiff;
+extern crate geotiff as tiff;
 
 use tiff::TIFF;
 
