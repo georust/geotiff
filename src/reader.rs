@@ -271,13 +271,13 @@ impl TIFFReader {
         let mut img: Vec<Vec<Vec<usize>>> = Vec::with_capacity(image_length as usize);
         for i in 0..image_length {
             &img.push(Vec::with_capacity(image_width as usize));
-            for j in 0..image_width {
+            for _ in 0..image_width {
                 &img[i as usize].push(vec![0; 1]); // TODO To be changed to take into account SamplesPerPixel!
             }
         }
 
         // Read strip after strip, and copy it into the output Vec.
-        let rows_per_strip = match rows_per_strip.value[0] {
+        let _rows_per_strip = match rows_per_strip.value[0] {
             TagValue::ShortValue(v) => v,
             _ => 0 as u16,
         };
@@ -301,7 +301,7 @@ impl TIFFReader {
         let mut curr_z = 0;
         for (offset, byte_count) in offsets.iter().zip(byte_counts.iter()) {
             reader.seek(SeekFrom::Start(*offset as u64))?;
-            for i in 0..(*byte_count / image_depth as u32) {
+            for _ in 0..(*byte_count / image_depth as u32) {
                 let v = self.read_n(reader, image_depth as u64);
                 // println!("x {:?} len {:?}", curr_x, img.len());
                 // println!("y {:?} wid {:?}", curr_y, img[0].len());
