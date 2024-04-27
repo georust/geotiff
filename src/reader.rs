@@ -136,7 +136,6 @@ impl TIFFReader {
             &TagType::FloatTag => TagValue::FloatValue(Endian::read_f32(&vec[..])),
             &TagType::DoubleTag => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
             &TagType::UndefinedTag => TagValue::ByteValue(0),
-            _ => panic!("Tag not found!"),
         }
     }
 

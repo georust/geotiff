@@ -57,7 +57,6 @@ pub fn tag_size(t: &TagType) -> u32 {
         TagType::SignedRationalTag => 8,
         TagType::FloatTag          => 4,
         TagType::DoubleTag         => 8,
-        _                          => 0,
     }
 }
 
