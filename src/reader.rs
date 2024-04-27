@@ -1,13 +1,12 @@
-use std::io::{Result, Error, ErrorKind, Read, Seek, SeekFrom};
-use std::path::Path;
 use std::fs::File;
+use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
+use std::path::Path;
+
+use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num::FromPrimitive;
 
-use byteorder::{ReadBytesExt, ByteOrder, BigEndian, LittleEndian};
-
-use lowlevel::{TIFFByteOrder, TIFFTag, BYTE, SBYTE, SHORT, SSHORT, LONG, SLONG, FLOAT,
-               TagType, TagValue, tag_size};
-use tiff::{TIFF, IFD, IFDEntry, decode_tag, decode_tag_type};
+use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagType, TagValue};
+use crate::tiff::{decode_tag, decode_tag_type, IFDEntry, IFD, TIFF};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
 pub trait SeekableReader: Seek + Read {}
@@ -15,7 +14,7 @@ pub trait SeekableReader: Seek + Read {}
 impl<T: Seek + Read> SeekableReader for T {}
 
 /// The TIFF reader class that encapsulates all functionality related to reading `.tiff` files.
-/// In particular, this includes reading the TIFF header, the image file directories (IDF), and
+/// In particular, this includes reading the TIFF header, the image file directories (IFD), and
 /// the plain data.
 pub struct TIFFReader;
 
