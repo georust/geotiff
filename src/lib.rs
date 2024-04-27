@@ -3,19 +3,13 @@ extern crate byteorder;
 extern crate enum_primitive;
 extern crate num;
 
-use num::FromPrimitive;
-
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
-use std::io::{Read, Seek};
-use std::collections::{HashMap, HashSet};
-use std::io::Result;
 use std::fmt;
+use std::io::Result;
 
 mod lowlevel;
 mod reader;
 pub mod tiff;
 
-use tiff::*;
 use reader::*;
 pub use tiff::TIFF;
 
