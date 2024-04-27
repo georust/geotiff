@@ -270,9 +270,9 @@ impl TIFFReader {
         // TODO The img Vec should optimally not be of usize, but of size "image_depth".
         let mut img: Vec<Vec<Vec<usize>>> = Vec::with_capacity(image_length as usize);
         for i in 0..image_length {
-            &img.push(Vec::with_capacity(image_width as usize));
+            img.push(Vec::with_capacity(image_width as usize));
             for _ in 0..image_width {
-                &img[i as usize].push(vec![0; 1]); // TODO To be changed to take into account SamplesPerPixel!
+                img[i as usize].push(vec![0; 1]); // TODO To be changed to take into account SamplesPerPixel!
             }
         }
 
