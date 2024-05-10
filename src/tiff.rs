@@ -1,6 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+
 use enum_primitive::FromPrimitive;
-use lowlevel::*;
+
+use crate::lowlevel::*;
 
 /// The basic TIFF struct. This includes the header (specifying byte order and IFD offsets) as
 /// well as all the image file directories (IFDs) plus image data.
