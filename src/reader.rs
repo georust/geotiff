@@ -5,8 +5,8 @@ use std::path::Path;
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num::FromPrimitive;
 
-use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagType, TagValue};
-use crate::tiff::{decode_tag, decode_tag_type, IFDEntry, IFD, TIFF};
+use crate::geotiff::{decode_tag, decode_tag_type, IFDEntry, IFD, TIFF};
+use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagType,TagValue};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
 pub trait SeekableReader: Seek + Read {}

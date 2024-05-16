@@ -6,12 +6,12 @@ extern crate num;
 use std::fmt;
 use std::io::Result;
 
+pub mod geotiff;
 mod lowlevel;
 mod reader;
-pub mod tiff;
 
+pub use geotiff::TIFF;
 use reader::*;
-pub use tiff::TIFF;
 
 /// The GeoTIFF library reads `.tiff` files.
 ///
