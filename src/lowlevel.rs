@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+use tiff::tags::Type;
 
 // Base types of the TIFF format.
 pub type BYTE      = u8;
@@ -23,40 +23,26 @@ enum_from_primitive! {
     }
 }
 
-enum_from_primitive! {
-    #[repr(u16)]
-    #[derive(Debug,PartialEq)]
-    pub enum TagType {
-        ByteTag           = 1,
-        ASCIITag          = 2,
-        ShortTag          = 3,
-        LongTag           = 4,
-        RationalTag       = 5,
-        SignedByteTag     = 6,
-        UndefinedTag      = 7,
-        SignedShortTag    = 8,
-        SignedLongTag     = 9,
-        SignedRationalTag = 10,
-        FloatTag          = 11,
-        DoubleTag         = 12,
-    }
-}
-
 /// Helper function that returns the size of a certain tag.
-pub fn tag_size(t: &TagType) -> u32 {
+pub fn tag_size(t: &Type) -> u32 {
     match *t {
-        TagType::ByteTag           => 1,
-        TagType::ASCIITag          => 1,
-        TagType::ShortTag          => 2,
-        TagType::LongTag           => 4,
-        TagType::RationalTag       => 8,
-        TagType::SignedByteTag     => 1,
-        TagType::UndefinedTag      => 1,
-        TagType::SignedShortTag    => 2,
-        TagType::SignedLongTag     => 2,
-        TagType::SignedRationalTag => 8,
-        TagType::FloatTag          => 4,
-        TagType::DoubleTag         => 8,
+        Type::BYTE => 1,
+        Type::ASCII => 1,
+        Type::SHORT => 2,
+        Type::LONG => 4,
+        Type::RATIONAL => 8,
+        Type::SBYTE => 1,
+        Type::UNDEFINED => 1,
+        Type::SSHORT => 2,
+        Type::SLONG => 2,
+        Type::SRATIONAL => 8,
+        Type::FLOAT => 4,
+        Type::DOUBLE => 8,
+        Type::IFD => 4,
+        Type::LONG8 => 8,
+        Type::SLONG8 => 8,
+        Type::IFD8 => 8,
+        _ => unimplemented!(),
     }
 }
 

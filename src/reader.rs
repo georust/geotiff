@@ -4,9 +4,10 @@ use std::path::Path;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num::FromPrimitive;
+use tiff::tags::Type;
 
-use crate::geotiff::{decode_tag, decode_tag_type, IFDEntry, IFD, TIFF};
-use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagType,TagValue};
+use crate::geotiff::{decode_tag, IFDEntry, IFD, TIFF};
+use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagValue};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
 pub trait SeekableReader: Seek + Read {}
@@ -119,23 +120,32 @@ impl TIFFReader {
     /// Converts a Vec<u8> into a TagValue, depending on the type of the tag. In the TIFF file
     /// format, each tag type indicates which value it stores (e.g., a byte, ascii, or long value).
     /// This means that the tag values have to be read taking the tag type into consideration.
-    fn vec_to_tag_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &TagType) -> TagValue {
+    fn vec_to_tag_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &Type) -> TagValue {
         let len = vec.len();
         match tpe {
-            &TagType::ByteTag => TagValue::ByteValue(vec[0]),
-            &TagType::ASCIITag => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
-            &TagType::ShortTag => TagValue::ShortValue(Endian::read_u16(&vec[..])),
-            &TagType::LongTag => TagValue::LongValue(Endian::read_u32(&vec[..])),
-            &TagType::RationalTag => TagValue::RationalValue((Endian::read_u32(&vec[..(len / 2)]),
-                                                              Endian::read_u32(&vec[(len / 2)..]))),
-            &TagType::SignedByteTag => TagValue::SignedByteValue(vec[0] as i8),
-            &TagType::SignedShortTag => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
-            &TagType::SignedLongTag => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
-            &TagType::SignedRationalTag => TagValue::SignedRationalValue((Endian::read_i32(&vec[..(len / 2)]),
-                                                                          Endian::read_i32(&vec[(len / 2)..]))),
-            &TagType::FloatTag => TagValue::FloatValue(Endian::read_f32(&vec[..])),
-            &TagType::DoubleTag => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
-            &TagType::UndefinedTag => TagValue::ByteValue(0),
+            &Type::BYTE => TagValue::ByteValue(vec[0]),
+            &Type::ASCII => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
+            &Type::SHORT => TagValue::ShortValue(Endian::read_u16(&vec[..])),
+            &Type::LONG => TagValue::LongValue(Endian::read_u32(&vec[..])),
+            &Type::RATIONAL => TagValue::RationalValue((
+                Endian::read_u32(&vec[..(len / 2)]),
+                Endian::read_u32(&vec[(len / 2)..]),
+            )),
+            &Type::SBYTE => TagValue::SignedByteValue(vec[0] as i8),
+            &Type::UNDEFINED => TagValue::ByteValue(0),
+            &Type::SSHORT => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
+            &Type::SLONG => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
+            &Type::SRATIONAL => TagValue::SignedRationalValue((
+                Endian::read_i32(&vec[..(len / 2)]),
+                Endian::read_i32(&vec[(len / 2)..]),
+            )),
+            &Type::FLOAT => TagValue::FloatValue(Endian::read_f32(&vec[..])),
+            &Type::DOUBLE => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
+            &Type::IFD => unimplemented!(),
+            &Type::LONG8 => unimplemented!(),
+            &Type::SLONG8 => unimplemented!(),
+            &Type::IFD8 => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
 
@@ -185,7 +195,7 @@ impl TIFFReader {
 
         // Decode the type.
         let tpe_msg = format!("Invalid tag type {:04X}", tpe_value);
-        let tpe = decode_tag_type(tpe_value).expect(&tpe_msg);
+        let tpe = Type::from_u16(tpe_value).expect(&tpe_msg);
         let value_size = tag_size(&tpe);
 
         // Let's get the value(s) of this tag.
