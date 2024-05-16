@@ -123,28 +123,28 @@ impl TIFFReader {
     fn vec_to_tag_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &Type) -> TagValue {
         let len = vec.len();
         match tpe {
-            &Type::BYTE => TagValue::ByteValue(vec[0]),
-            &Type::ASCII => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
-            &Type::SHORT => TagValue::ShortValue(Endian::read_u16(&vec[..])),
-            &Type::LONG => TagValue::LongValue(Endian::read_u32(&vec[..])),
-            &Type::RATIONAL => TagValue::RationalValue((
+            Type::BYTE => TagValue::ByteValue(vec[0]),
+            Type::ASCII => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
+            Type::SHORT => TagValue::ShortValue(Endian::read_u16(&vec[..])),
+            Type::LONG => TagValue::LongValue(Endian::read_u32(&vec[..])),
+            Type::RATIONAL => TagValue::RationalValue((
                 Endian::read_u32(&vec[..(len / 2)]),
                 Endian::read_u32(&vec[(len / 2)..]),
             )),
-            &Type::SBYTE => TagValue::SignedByteValue(vec[0] as i8),
-            &Type::UNDEFINED => TagValue::ByteValue(0),
-            &Type::SSHORT => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
-            &Type::SLONG => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
-            &Type::SRATIONAL => TagValue::SignedRationalValue((
+            Type::SBYTE => TagValue::SignedByteValue(vec[0] as i8),
+            Type::UNDEFINED => TagValue::ByteValue(0),
+            Type::SSHORT => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
+            Type::SLONG => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
+            Type::SRATIONAL => TagValue::SignedRationalValue((
                 Endian::read_i32(&vec[..(len / 2)]),
                 Endian::read_i32(&vec[(len / 2)..]),
             )),
-            &Type::FLOAT => TagValue::FloatValue(Endian::read_f32(&vec[..])),
-            &Type::DOUBLE => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
-            &Type::IFD => unimplemented!(),
-            &Type::LONG8 => unimplemented!(),
-            &Type::SLONG8 => unimplemented!(),
-            &Type::IFD8 => unimplemented!(),
+            Type::FLOAT => TagValue::FloatValue(Endian::read_f32(&vec[..])),
+            Type::DOUBLE => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
+            Type::IFD => unimplemented!(),
+            Type::LONG8 => unimplemented!(),
+            Type::SLONG8 => unimplemented!(),
+            Type::IFD8 => unimplemented!(),
             _ => unimplemented!(),
         }
     }
