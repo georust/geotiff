@@ -1,6 +1,14 @@
 # A TIFF Library for Rust
 
-![Version](https://img.shields.io/badge/version-v0.0.1-red.svg)
+![Version](https://img.shields.io/badge/version-v0.0.2-red.svg)
+
+> [!IMPORTANT]
+> This crate is currently undergoing a significant refactoring process to be built on
+> top of the [`tiff`](https://crates.io/crates/tiff) crate, so expect breaking changes
+> as we work towards a v0.1.0 release sometime in 2024 (contributions are welcome!). See
+> the thread at https://github.com/georust/geotiff/issues/7 for more details.
+
+## Motivation (pre-2020)
 
 I needed this library to import elevation models for a routing library. As elevation models usually come in GeoTIFF format, but no such library was available for Rust, I created this library, taking other libraries as inspiration:
 
@@ -46,4 +54,3 @@ Several documents describe the structure of a (Geo)TIFF:
 * The official TIFF specification: http://download.osgeo.org/geotiff/spec/tiff6.pdf.
 * The official GeoTIFF specitication: http://download.osgeo.org/geotiff/spec/geotiff.rtf
 * The article "GeoTIFF – A standard image file format for GIS applications" by Mahammad and Ramakrishnan: https://www.geospatialworld.net/article/geotiff-a-standard-image-file-format-for-gis-applications/
-
