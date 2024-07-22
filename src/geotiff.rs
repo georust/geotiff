@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use tiff::tags::{Tag, Type};
 
 use crate::lowlevel::*;
