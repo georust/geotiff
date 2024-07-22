@@ -4,10 +4,11 @@ use std::path::Path;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num::FromPrimitive;
+use tiff::decoder::ifd::Value;
 use tiff::tags::{Tag, Type};
 
 use crate::geotiff::{IFDEntry, IFD, TIFF};
-use crate::lowlevel::{tag_size, TIFFByteOrder, TagValue};
+use crate::lowlevel::{tag_size, TIFFByteOrder};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
 pub trait SeekableReader: Seek + Read {}
@@ -117,34 +118,35 @@ impl TIFFReader {
         buf
     }
 
-    /// Converts a Vec<u8> into a TagValue, depending on the type of the tag. In the TIFF file
-    /// format, each tag type indicates which value it stores (e.g., a byte, ascii, or long value).
-    /// This means that the tag values have to be read taking the tag type into consideration.
-    fn vec_to_tag_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &Type) -> TagValue {
+    /// Converts a Vec<u8> into a tiff::decoder::ifd::Value, depending on the type of the tag. In
+    /// the TIFF file format, each tag type indicates which value it stores (e.g., a byte, ascii,
+    /// or long value). This means that the tag values have to be read taking the tag type into
+    /// consideration.
+    fn vec_to_tag_value<Endian: ByteOrder>(&self, vec: Vec<u8>, tpe: &Type) -> Value {
         let len = vec.len();
         match tpe {
-            Type::BYTE => TagValue::ByteValue(vec[0]),
-            Type::ASCII => TagValue::AsciiValue(String::from_utf8_lossy(&vec).to_string()),
-            Type::SHORT => TagValue::ShortValue(Endian::read_u16(&vec[..])),
-            Type::LONG => TagValue::LongValue(Endian::read_u32(&vec[..])),
-            Type::RATIONAL => TagValue::RationalValue((
+            Type::BYTE => Value::Byte(vec[0]),
+            Type::ASCII => Value::Ascii(String::from_utf8_lossy(&vec).to_string()),
+            Type::SHORT => Value::Short(Endian::read_u16(&vec[..])),
+            Type::LONG => Value::Unsigned(Endian::read_u32(&vec[..])),
+            Type::RATIONAL => Value::Rational(
                 Endian::read_u32(&vec[..(len / 2)]),
                 Endian::read_u32(&vec[(len / 2)..]),
-            )),
-            Type::SBYTE => TagValue::SignedByteValue(vec[0] as i8),
-            Type::UNDEFINED => TagValue::ByteValue(0),
-            Type::SSHORT => TagValue::SignedShortValue(Endian::read_i16(&vec[..])),
-            Type::SLONG => TagValue::SignedLongValue(Endian::read_i32(&vec[..])),
-            Type::SRATIONAL => TagValue::SignedRationalValue((
+            ),
+            // Type::SBYTE => Value::SignedByte(vec[0] as i8), // TODO wait for upstream SignedByte enum variant
+            Type::UNDEFINED => Value::Byte(0),
+            // Type::SSHORT => Value::SignedShort(Endian::read_i16(&vec[..])), // TODO wait for upstream SignedShort enum variant
+            Type::SLONG => Value::Signed(Endian::read_i32(&vec[..])),
+            Type::SRATIONAL => Value::SRational(
                 Endian::read_i32(&vec[..(len / 2)]),
                 Endian::read_i32(&vec[(len / 2)..]),
-            )),
-            Type::FLOAT => TagValue::FloatValue(Endian::read_f32(&vec[..])),
-            Type::DOUBLE => TagValue::DoubleValue(Endian::read_f64(&vec[..])),
-            Type::IFD => unimplemented!(),
+            ),
+            Type::FLOAT => Value::Float(Endian::read_f32(&vec[..])),
+            Type::DOUBLE => Value::Double(Endian::read_f64(&vec[..])),
+            Type::IFD => Value::Ifd(Endian::read_u32(&vec[..])),
             Type::LONG8 => unimplemented!(),
             Type::SLONG8 => unimplemented!(),
-            Type::IFD8 => unimplemented!(),
+            Type::IFD8 => Value::IfdBig(Endian::read_u64(&vec[..])),
             _ => unimplemented!(),
         }
     }
@@ -295,16 +297,16 @@ impl TIFFReader {
 
         // Create the output Vec.
         let image_length = match image_length.value[0] {
-            TagValue::ShortValue(v) => v,
-            _ => 0 as u16,
+            Value::Short(v) => v,
+            _ => 0_u16,
         };
         let image_width = match image_width.value[0] {
-            TagValue::ShortValue(v) => v,
-            _ => 0 as u16,
+            Value::Short(v) => v,
+            _ => 0_u16,
         };
         let image_depth = match image_depth.value[0] {
-            TagValue::ShortValue(v) => v / 8,
-            _ => 0 as u16,
+            Value::Short(v) => v / 8,
+            _ => 0_u16,
         };
         // TODO The img Vec should optimally not be of usize, but of size "image_depth".
         let mut img: Vec<Vec<Vec<usize>>> = Vec::with_capacity(image_length as usize);
@@ -317,21 +319,19 @@ impl TIFFReader {
 
         // Read strip after strip, and copy it into the output Vec.
         let _rows_per_strip = match rows_per_strip.value[0] {
-            TagValue::ShortValue(v) => v,
-            _ => 0 as u16,
+            Value::Short(v) => v,
+            _ => 0_u16,
         };
         let mut offsets: Vec<u32> = Vec::with_capacity(strip_offsets.value.len());
         for v in &strip_offsets.value {
-            match v {
-                TagValue::LongValue(v) => offsets.push(*v),
-                _ => (),
+            if let Value::Unsigned(v) = v {
+                offsets.push(*v)
             };
         }
         let mut byte_counts: Vec<u32> = Vec::with_capacity(strip_byte_counts.value.len());
         for v in &strip_byte_counts.value {
-            match v {
-                TagValue::LongValue(v) => byte_counts.push(*v),
-                _ => (),
+            if let Value::Unsigned(v) = v {
+                byte_counts.push(*v)
             };
         }
         // A bit much boilerplate, but should be okay and fast.
