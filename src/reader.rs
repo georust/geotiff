@@ -4,10 +4,10 @@ use std::path::Path;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian, ReadBytesExt};
 use num::FromPrimitive;
-use tiff::tags::Type;
+use tiff::tags::{Tag, Type};
 
-use crate::geotiff::{decode_tag, IFDEntry, IFD, TIFF};
-use crate::lowlevel::{tag_size, TIFFByteOrder, TIFFTag, TagValue};
+use crate::geotiff::{IFDEntry, IFD, TIFF};
+use crate::lowlevel::{tag_size, TIFFByteOrder, TagValue};
 
 /// A helper trait to indicate that something needs to be seekable and readable.
 pub trait SeekableReader: Seek + Read {}
@@ -191,7 +191,7 @@ impl TIFFReader {
 
         // Decode the tag.
         let tag_msg = format!("Invalid tag {:04X}", tag_value);
-        let tag = decode_tag(tag_value).ok_or(Error::new(ErrorKind::InvalidData, tag_msg))?;
+        let tag = Tag::from_u16(tag_value).ok_or(Error::new(ErrorKind::InvalidData, tag_msg))?;
 
         // Decode the type.
         let tpe_msg = format!("Invalid tag type {:04X}", tpe_value);
@@ -247,21 +247,51 @@ impl TIFFReader {
         ifd: &IFD,
     ) -> Result<Vec<Vec<Vec<usize>>>> {
         // Image size and depth.
-        let image_length = ifd.entries.iter().find(|&e| e.tag == TIFFTag::ImageLengthTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Image length not found."))?;
-        let image_width = ifd.entries.iter().find(|&e| e.tag == TIFFTag::ImageWidthTag)
+        let image_length = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::ImageLength)
+            .ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Image length not found.",
+            ))?;
+        let image_width = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::ImageWidth)
             .ok_or(Error::new(ErrorKind::InvalidData, "Image width not found."))?;
-        let image_depth = ifd.entries.iter().find(|&e| e.tag == TIFFTag::BitsPerSampleTag)
+        let image_depth = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::BitsPerSample)
             .ok_or(Error::new(ErrorKind::InvalidData, "Image depth not found."))?;
 
         // Storage location within the TIFF. First, lets get the number of rows per strip.
-        let rows_per_strip = ifd.entries.iter().find(|&e| e.tag == TIFFTag::RowsPerStripTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Rows per strip not found."))?;
+        let rows_per_strip = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::RowsPerStrip)
+            .ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Rows per strip not found.",
+            ))?;
         // For each strip, its offset within the TIFF file.
-        let strip_offsets = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripOffsetsTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Strip offsets not found."))?;
-        let strip_byte_counts = ifd.entries.iter().find(|&e| e.tag == TIFFTag::StripByteCountsTag)
-            .ok_or(Error::new(ErrorKind::InvalidData, "Strip byte counts not found."))?;
+        let strip_offsets = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::StripOffsets)
+            .ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Strip offsets not found.",
+            ))?;
+        let strip_byte_counts = ifd
+            .entries
+            .iter()
+            .find(|&e| e.tag == Tag::StripByteCounts)
+            .ok_or(Error::new(
+                ErrorKind::InvalidData,
+                "Strip byte counts not found.",
+            ))?;
 
         // Create the output Vec.
         let image_length = match image_length.value[0] {

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use enum_primitive::FromPrimitive;
-use tiff::tags::Type;
+use tiff::tags::{Tag, Type};
 
 use crate::lowlevel::*;
 
@@ -36,7 +36,7 @@ pub struct IFD {
 /// tag values.
 #[derive(Debug)]
 pub struct IFDEntry {
-    pub tag: TIFFTag,
+    pub tag: Tag,
     pub tpe: Type,
     pub count: LONG,
     pub value_offset: LONG,
@@ -56,11 +56,6 @@ impl IFD {
     pub fn get_bytes_per_sample() -> usize {
         3
     }
-}
-
-/// Decodes an u16 value into a TIFFTag.
-pub fn decode_tag(value: u16) -> Option<TIFFTag> {
-    TIFFTag::from_u16(value)
 }
 
 /// Validation functions to make sure all the required tags are existing for a certain GeoTiff
