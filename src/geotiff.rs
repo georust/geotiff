@@ -1,3 +1,4 @@
+use tiff::decoder::ifd::Value;
 use tiff::tags::{Tag, Type};
 
 use crate::lowlevel::*;
@@ -37,7 +38,7 @@ pub struct IFDEntry {
     pub tpe: Type,
     pub count: LONG,
     pub value_offset: LONG,
-    pub value: Vec<TagValue>,
+    pub value: Vec<Value>,
 }
 
 /// Implementations for the IFD struct.
