@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use tiff::tags::Type;
 
 // Base types of the TIFF format.
@@ -129,6 +130,7 @@ pub enum ImageOrientation {
 // Baseline Tags
 enum_from_primitive! {
     #[repr(u16)]
+    #[deprecated(since="0.1.0", note="use tiff::tags::Tag instead")]
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub enum TIFFTag {
 
