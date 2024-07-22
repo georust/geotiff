@@ -1,7 +1,4 @@
-use std::collections::HashSet;
-
-use enum_primitive::FromPrimitive;
-use tiff::tags::Type;
+use tiff::tags::{Tag, Type};
 
 use crate::lowlevel::*;
 
@@ -36,7 +33,7 @@ pub struct IFD {
 /// tag values.
 #[derive(Debug)]
 pub struct IFDEntry {
-    pub tag: TIFFTag,
+    pub tag: Tag,
     pub tpe: Type,
     pub count: LONG,
     pub value_offset: LONG,
@@ -55,50 +52,5 @@ impl IFD {
 
     pub fn get_bytes_per_sample() -> usize {
         3
-    }
-}
-
-/// Decodes an u16 value into a TIFFTag.
-pub fn decode_tag(value: u16) -> Option<TIFFTag> {
-    TIFFTag::from_u16(value)
-}
-
-/// Validation functions to make sure all the required tags are existing for a certain GeoTiff
-/// image type (e.g., grayscale or RGB image).
-pub fn validate_required_tags_for(typ: &ImageType) -> Option<HashSet<TIFFTag>> {
-    let required_grayscale_tags: HashSet<TIFFTag> = [
-        TIFFTag::ImageWidthTag,
-        TIFFTag::ImageLengthTag,
-        TIFFTag::BitsPerSampleTag,
-        TIFFTag::CompressionTag,
-        TIFFTag::PhotometricInterpretationTag,
-        TIFFTag::StripOffsetsTag,
-        TIFFTag::RowsPerStripTag,
-        TIFFTag::StripByteCountsTag,
-        TIFFTag::XResolutionTag,
-        TIFFTag::YResolutionTag,
-        TIFFTag::ResolutionUnitTag].iter().cloned().collect();
-
-    let required_rgb_image_tags: HashSet<TIFFTag> = [
-        TIFFTag::ImageWidthTag,
-        TIFFTag::ImageLengthTag,
-        TIFFTag::BitsPerSampleTag,
-        TIFFTag::CompressionTag,
-        TIFFTag::PhotometricInterpretationTag,
-        TIFFTag::StripOffsetsTag,
-        TIFFTag::SamplesPerPixelTag,
-        TIFFTag::RowsPerStripTag,
-        TIFFTag::StripByteCountsTag,
-        TIFFTag::XResolutionTag,
-        TIFFTag::YResolutionTag,
-        TIFFTag::ResolutionUnitTag,
-    ].iter().cloned().collect();
-
-    match *typ {
-        ImageType::Bilevel => None,
-        ImageType::Grayscale => None,
-        ImageType::PaletteColour => None,
-        ImageType::RGB => Some(required_rgb_image_tags.difference(&required_grayscale_tags).cloned().collect()),
-        ImageType::YCbCr => None,
     }
 }
