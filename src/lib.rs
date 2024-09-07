@@ -6,9 +6,9 @@ use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 use tiff::TiffResult;
 
-use crate::image_data::*;
+use crate::raster_data::*;
 
-mod image_data;
+mod raster_data;
 
 macro_rules! unwrap_primitive_type {
     ($result: expr, $actual: ty, $expected: ty) => {
@@ -24,15 +24,15 @@ macro_rules! unwrap_primitive_type {
     };
 }
 
-/// The basic GeoTIFF struct. This includes any metadata as well as the actual image data.
+/// The basic GeoTIFF struct. This includes any metadata as well as the actual raster data.
 ///
-/// The image data has a size of raster_width * raster_height * num_samples
+/// The raster data has a size of raster_width * raster_height * num_samples
 #[derive(Debug)]
 pub struct GeoTiff {
     pub raster_width: usize,
     pub raster_height: usize,
     pub num_samples: usize,
-    image_data: ImageData,
+    raster_data: RasterData,
 }
 
 impl GeoTiff {
@@ -46,24 +46,24 @@ impl GeoTiff {
             None => 1,
             Some(value) => value.into_u16()? as usize,
         };
-        let image_data = match decoder.read_image()? {
-            DecodingResult::U8(data) => ImageData::U8(data),
-            DecodingResult::U16(data) => ImageData::U16(data),
-            DecodingResult::U32(data) => ImageData::U32(data),
-            DecodingResult::U64(data) => ImageData::U64(data),
-            DecodingResult::F32(data) => ImageData::F32(data),
-            DecodingResult::F64(data) => ImageData::F64(data),
-            DecodingResult::I8(data) => ImageData::I8(data),
-            DecodingResult::I16(data) => ImageData::I16(data),
-            DecodingResult::I32(data) => ImageData::I32(data),
-            DecodingResult::I64(data) => ImageData::I64(data),
+        let raster_data = match decoder.read_image()? {
+            DecodingResult::U8(data) => RasterData::U8(data),
+            DecodingResult::U16(data) => RasterData::U16(data),
+            DecodingResult::U32(data) => RasterData::U32(data),
+            DecodingResult::U64(data) => RasterData::U64(data),
+            DecodingResult::F32(data) => RasterData::F32(data),
+            DecodingResult::F64(data) => RasterData::F64(data),
+            DecodingResult::I8(data) => RasterData::I8(data),
+            DecodingResult::I16(data) => RasterData::I16(data),
+            DecodingResult::I32(data) => RasterData::I32(data),
+            DecodingResult::I64(data) => RasterData::I64(data),
         };
 
         Ok(Self {
             raster_width,
             raster_height,
             num_samples,
-            image_data,
+            raster_data,
         })
     }
 
@@ -71,7 +71,7 @@ impl GeoTiff {
         let GeoTiff {
             raster_width,
             num_samples,
-            image_data,
+            raster_data,
             ..
         } = self;
 
@@ -83,17 +83,17 @@ impl GeoTiff {
         }
 
         let index = (y * raster_width + x) * num_samples + sample;
-        match image_data {
-            ImageData::U8(data) => unwrap_primitive_type!(T::from_u8(data[index]), u8, T),
-            ImageData::U16(data) => unwrap_primitive_type!(T::from_u16(data[index]), u16, T),
-            ImageData::U32(data) => unwrap_primitive_type!(T::from_u32(data[index]), u32, T),
-            ImageData::U64(data) => unwrap_primitive_type!(T::from_u64(data[index]), u64, T),
-            ImageData::F32(data) => unwrap_primitive_type!(T::from_f32(data[index]), f32, T),
-            ImageData::F64(data) => unwrap_primitive_type!(T::from_f64(data[index]), f64, T),
-            ImageData::I8(data) => unwrap_primitive_type!(T::from_i8(data[index]), i8, T),
-            ImageData::I16(data) => unwrap_primitive_type!(T::from_i16(data[index]), i16, T),
-            ImageData::I32(data) => unwrap_primitive_type!(T::from_i32(data[index]), i32, T),
-            ImageData::I64(data) => unwrap_primitive_type!(T::from_i64(data[index]), i64, T),
+        match raster_data {
+            RasterData::U8(data) => unwrap_primitive_type!(T::from_u8(data[index]), u8, T),
+            RasterData::U16(data) => unwrap_primitive_type!(T::from_u16(data[index]), u16, T),
+            RasterData::U32(data) => unwrap_primitive_type!(T::from_u32(data[index]), u32, T),
+            RasterData::U64(data) => unwrap_primitive_type!(T::from_u64(data[index]), u64, T),
+            RasterData::F32(data) => unwrap_primitive_type!(T::from_f32(data[index]), f32, T),
+            RasterData::F64(data) => unwrap_primitive_type!(T::from_f64(data[index]), f64, T),
+            RasterData::I8(data) => unwrap_primitive_type!(T::from_i8(data[index]), i8, T),
+            RasterData::I16(data) => unwrap_primitive_type!(T::from_i16(data[index]), i16, T),
+            RasterData::I32(data) => unwrap_primitive_type!(T::from_i32(data[index]), i32, T),
+            RasterData::I64(data) => unwrap_primitive_type!(T::from_i64(data[index]), i64, T),
         }
     }
 }
