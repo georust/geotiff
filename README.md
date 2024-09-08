@@ -1,6 +1,6 @@
 # A GeoTIFF library for Rust
 
-![Version](https://img.shields.io/badge/version-v0.0.2-red.svg)
+[![geotiff on crates.io](https://img.shields.io/crates/v/geotiff.svg)](https://crates.io/crates/geotiff)
 
 > [!IMPORTANT]
 > This crate is currently undergoing a significant refactoring process to be built on

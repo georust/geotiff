@@ -1,7 +1,7 @@
 [package]
 name = "geotiff"
 description = "A GeoTIFF library for Rust"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 authors = ["Dominik Bucher <dobucher@ethz.ch>"]
 repository = "https://github.com/georust/geotiff"
