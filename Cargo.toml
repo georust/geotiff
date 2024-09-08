@@ -6,6 +6,5 @@ authors = ["Dominik Bucher <dobucher@ethz.ch>"]
 repository = "https://github.com/georust/geotiff"
 
 [dependencies]
-byteorder = "*"
-enum_primitive = "*"
-num = "*"
+num-traits = "0.2"
+tiff = "0.9"

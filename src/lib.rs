@@ -1,40 +1,99 @@
-extern crate byteorder;
-#[macro_use]
-extern crate enum_primitive;
-extern crate num;
+use std::any::type_name;
+use std::io::{Read, Seek};
 
-use std::fmt;
-use std::io::Result;
+use num_traits::FromPrimitive;
+use tiff::decoder::{Decoder, DecodingResult};
+use tiff::tags::Tag;
+use tiff::TiffResult;
 
-mod lowlevel;
-mod reader;
-pub mod tiff;
+use crate::raster_data::*;
 
-use reader::*;
-pub use tiff::TIFF;
+mod raster_data;
 
-/// The GeoTIFF library reads `.tiff` files.
-///
-/// It is primarily used within a routing application that needs to parse digital elevation models.
-/// As such, other use cases are NOT tested (for now).
-impl TIFF {
-    /// Opens a `.tiff` file at the location indicated by `filename`.
-    pub fn open(filename: &str) -> Result<Box<TIFF>> {
-        let tiff_reader = TIFFReader;
-        tiff_reader.load(filename)
-    }
-
-    /// Gets the value at a given coordinate (in pixels).
-    pub fn get_value_at(&self, lon: usize, lat: usize) -> usize {
-        self.image_data[lon][lat][0]
-    }
+macro_rules! unwrap_primitive_type {
+    ($result: expr, $actual: ty, $expected: ty) => {
+        $result
+            .ok_or_else(|| {
+                format!(
+                    "Cannot represent {} as {}",
+                    type_name::<$actual>(),
+                    type_name::<$expected>()
+                )
+            })
+            .unwrap()
+    };
 }
 
-/// Overwrite default display function.
-impl fmt::Display for TIFF {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TIFF(Image size: [{}, {}, {}], Tag data: {:?})",
-               self.image_data.len(), self.image_data[0].len(),
-               self.image_data[0][0].len(), self.ifds)
+/// The basic GeoTIFF struct. This includes any metadata as well as the actual raster data.
+///
+/// The raster data has a size of raster_width * raster_height * num_samples
+#[derive(Debug)]
+pub struct GeoTiff {
+    pub raster_width: usize,
+    pub raster_height: usize,
+    pub num_samples: usize,
+    raster_data: RasterData,
+}
+
+impl GeoTiff {
+    pub fn read<R: Read + Seek>(reader: R) -> TiffResult<Self> {
+        let mut decoder = Decoder::new(reader)?;
+
+        let (raster_width, raster_height) = decoder
+            .dimensions()
+            .map(|(width, height)| (width as usize, height as usize))?;
+        let num_samples = match decoder.find_tag(Tag::SamplesPerPixel)? {
+            None => 1,
+            Some(value) => value.into_u16()? as usize,
+        };
+        let raster_data = match decoder.read_image()? {
+            DecodingResult::U8(data) => RasterData::U8(data),
+            DecodingResult::U16(data) => RasterData::U16(data),
+            DecodingResult::U32(data) => RasterData::U32(data),
+            DecodingResult::U64(data) => RasterData::U64(data),
+            DecodingResult::F32(data) => RasterData::F32(data),
+            DecodingResult::F64(data) => RasterData::F64(data),
+            DecodingResult::I8(data) => RasterData::I8(data),
+            DecodingResult::I16(data) => RasterData::I16(data),
+            DecodingResult::I32(data) => RasterData::I32(data),
+            DecodingResult::I64(data) => RasterData::I64(data),
+        };
+
+        Ok(Self {
+            raster_width,
+            raster_height,
+            num_samples,
+            raster_data,
+        })
+    }
+
+    pub fn get_value_at<T: FromPrimitive + 'static>(&self, x: usize, y: usize, sample: usize) -> T {
+        let GeoTiff {
+            raster_width,
+            num_samples,
+            raster_data,
+            ..
+        } = self;
+
+        if &sample >= num_samples {
+            panic!(
+                "sample out of bounds: the number of samples is {} but the sample is {}",
+                num_samples, sample
+            )
+        }
+
+        let index = (y * raster_width + x) * num_samples + sample;
+        match raster_data {
+            RasterData::U8(data) => unwrap_primitive_type!(T::from_u8(data[index]), u8, T),
+            RasterData::U16(data) => unwrap_primitive_type!(T::from_u16(data[index]), u16, T),
+            RasterData::U32(data) => unwrap_primitive_type!(T::from_u32(data[index]), u32, T),
+            RasterData::U64(data) => unwrap_primitive_type!(T::from_u64(data[index]), u64, T),
+            RasterData::F32(data) => unwrap_primitive_type!(T::from_f32(data[index]), f32, T),
+            RasterData::F64(data) => unwrap_primitive_type!(T::from_f64(data[index]), f64, T),
+            RasterData::I8(data) => unwrap_primitive_type!(T::from_i8(data[index]), i8, T),
+            RasterData::I16(data) => unwrap_primitive_type!(T::from_i16(data[index]), i16, T),
+            RasterData::I32(data) => unwrap_primitive_type!(T::from_i32(data[index]), i32, T),
+            RasterData::I64(data) => unwrap_primitive_type!(T::from_i64(data[index]), i64, T),
+        }
     }
 }
