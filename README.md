@@ -1,4 +1,4 @@
-# A TIFF Library for Rust
+# A GeoTIFF library for Rust
 
 ![Version](https://img.shields.io/badge/version-v0.0.2-red.svg)
 
