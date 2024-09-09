@@ -1,3 +1,4 @@
+//! A [GeoTIFF](https://www.ogc.org/standard/geotiff) library for Rust
 use std::any::type_name;
 use std::io::{Read, Seek};
 
