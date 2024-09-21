@@ -7,8 +7,13 @@ use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 use tiff::TiffResult;
 
+pub use crate::geo_key_directory::*;
+
+use crate::decoder_ext::*;
 use crate::raster_data::*;
 
+mod decoder_ext;
+mod geo_key_directory;
 mod raster_data;
 
 macro_rules! unwrap_primitive_type {
@@ -30,6 +35,7 @@ macro_rules! unwrap_primitive_type {
 /// The raster data has a size of raster_width * raster_height * num_samples
 #[derive(Debug)]
 pub struct GeoTiff {
+    pub geo_key_directory: GeoKeyDirectory,
     pub raster_width: usize,
     pub raster_height: usize,
     pub num_samples: usize,
@@ -40,6 +46,8 @@ impl GeoTiff {
     pub fn read<R: Read + Seek>(reader: R) -> TiffResult<Self> {
         let mut decoder = Decoder::new(reader)?;
 
+        let geo_key_directory = decoder.geo_key_directory()?;
+
         let (raster_width, raster_height) = decoder
             .dimensions()
             .map(|(width, height)| (width as usize, height as usize))?;
@@ -47,6 +55,7 @@ impl GeoTiff {
             None => 1,
             Some(value) => value.into_u16()? as usize,
         };
+
         let raster_data = match decoder.read_image()? {
             DecodingResult::U8(data) => RasterData::U8(data),
             DecodingResult::U16(data) => RasterData::U16(data),
@@ -61,6 +70,7 @@ impl GeoTiff {
         };
 
         Ok(Self {
+            geo_key_directory,
             raster_width,
             raster_height,
             num_samples,
