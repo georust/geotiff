@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 
-use geotiff::GeoTiff;
+use geotiff::{GeoKeyDirectory, GeoTiff};
 
 fn read_geotiff<P: AsRef<Path>>(path: P) -> GeoTiff {
     GeoTiff::read(File::open(path).expect("File I/O error")).expect("File I/O error")
@@ -31,4 +31,46 @@ fn test_load_zh_dem_25() {
     assert_eq!(geotiff.get_value_at::<i16>(0, 0, 0), 551);
     assert_eq!(geotiff.get_value_at::<i16>(67, 45, 0), 530);
     assert_eq!(geotiff.get_value_at::<i16>(325, 142, 0), 587);
+
+    assert_eq!(
+        geotiff.geo_key_directory,
+        GeoKeyDirectory {
+            ..Default::default()
+        }
+    );
+}
+
+#[test]
+fn test_load_merc() {
+    let geotiff = read_geotiff("resources/merc.tif");
+
+    println!("{geotiff:?}");
+    assert_eq!(geotiff.raster_width, 200);
+    assert_eq!(geotiff.raster_height, 200);
+    assert_eq!(geotiff.num_samples, 1);
+
+    assert_eq!(
+        geotiff.geo_key_directory,
+        GeoKeyDirectory {
+            key_directory_version: 1,
+            key_revision: 1,
+            minor_revision: 2,
+            model_type: Some(1),
+            raster_type: Some(1),
+            geog_geodetic_datum: Some(6267),
+            geog_ellipsoid: Some(7008),
+            projected_type: Some(32767),
+            proj_citation: Some("Mercator North American 1927".into()),
+            projection: Some(32767),
+            proj_coord_trans: Some(7),
+            proj_linear_units: Some(9001),
+            proj_nat_origin_long: Some(-90.0),
+            proj_nat_origin_lat: Some(30.0),
+            proj_false_easting: Some(0.001),
+            proj_false_northing: Some(0.002),
+            proj_center_lat: Some(34.0),
+            proj_scale_at_nat_origin: Some(0.829916312080482),
+            ..Default::default()
+        }
+    );
 }
