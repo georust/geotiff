@@ -9,9 +9,11 @@ use tiff::TiffResult;
 
 pub use crate::geo_key_directory::*;
 
+use crate::coordinate_transform::*;
 use crate::decoder_ext::*;
 use crate::raster_data::*;
 
+mod coordinate_transform;
 mod decoder_ext;
 mod geo_key_directory;
 mod raster_data;
@@ -39,6 +41,7 @@ pub struct GeoTiff {
     pub raster_width: usize,
     pub raster_height: usize,
     pub num_samples: usize,
+    coordinate_transform: Option<CoordinateTransform>,
     raster_data: RasterData,
 }
 
@@ -47,6 +50,7 @@ impl GeoTiff {
         let mut decoder = Decoder::new(reader)?;
 
         let geo_key_directory = decoder.geo_key_directory()?;
+        let coordinate_transform = decoder.coordinate_transform()?;
 
         let (raster_width, raster_height) = decoder
             .dimensions()
@@ -74,6 +78,7 @@ impl GeoTiff {
             raster_width,
             raster_height,
             num_samples,
+            coordinate_transform,
             raster_data,
         })
     }
