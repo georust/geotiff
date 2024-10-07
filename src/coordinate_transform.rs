@@ -1,6 +1,7 @@
 use geo_types::Coord;
 use tiff::{TiffError, TiffFormatError, TiffResult};
 
+mod affine_transform;
 mod tie_point_and_pixel_scale;
 
 const MODEL_TIE_POINT_TAG: &str = "ModelTiePointTag";
@@ -8,8 +9,11 @@ const MODEL_PIXEL_SCALE_TAG: &str = "ModelPixelScaleTag";
 const MODEL_TRANSFORMATION_TAG: &str = "ModelTransformationTag";
 
 #[derive(Debug)]
-pub(super) enum CoordinateTransform {
-    AffineTransform,
+pub enum CoordinateTransform {
+    AffineTransform {
+        transform: [f64; 6],
+        inverse_transform: [f64; 6],
+    },
     TiePointAndPixelScale {
         raster_point: Coord,
         model_point: Coord,
@@ -73,7 +77,7 @@ impl CoordinateTransform {
                 )));
             }
 
-            Ok(CoordinateTransform::AffineTransform)
+            Self::from_transformation_matrix(transformation_matrix)
         } else {
             let Some(tie_points) = tie_points else {
                 return Err(TiffError::FormatError(TiffFormatError::Format(
@@ -97,6 +101,9 @@ impl CoordinateTransform {
 
     pub fn transform_to_model(&self, coord: &Coord) -> Coord {
         match self {
+            CoordinateTransform::AffineTransform { transform, .. } => {
+                Self::transform_by_affine_transform(transform, coord)
+            }
             CoordinateTransform::TiePointAndPixelScale {
                 raster_point,
                 model_point,
@@ -113,6 +120,9 @@ impl CoordinateTransform {
 
     pub(super) fn transform_to_raster(&self, coord: &Coord) -> Coord {
         match self {
+            CoordinateTransform::AffineTransform {
+                inverse_transform, ..
+            } => Self::transform_by_affine_transform(inverse_transform, coord),
             CoordinateTransform::TiePointAndPixelScale {
                 raster_point,
                 model_point,
