@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 
-use geotiff::{GeoKeyDirectory, GeoTiff};
+use geotiff::{GeoKeyDirectory, GeoTiff, RasterType};
 
 fn read_geotiff<P: AsRef<Path>>(path: P) -> GeoTiff {
     GeoTiff::read(File::open(path).expect("File I/O error")).expect("File I/O error")
@@ -56,7 +56,7 @@ fn test_load_merc() {
             key_revision: 1,
             minor_revision: 2,
             model_type: Some(1),
-            raster_type: Some(1),
+            raster_type: Some(RasterType::RasterPixelIsArea),
             geog_geodetic_datum: Some(6267),
             geog_ellipsoid: Some(7008),
             projected_type: Some(32767),
