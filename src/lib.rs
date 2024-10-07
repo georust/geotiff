@@ -1,7 +1,7 @@
 //! A [GeoTIFF](https://www.ogc.org/standard/geotiff) library for Rust
 use std::any::type_name;
 use std::io::{Read, Seek};
-
+use geo_types::{Coord, Rect};
 use num_traits::FromPrimitive;
 use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
@@ -83,23 +83,35 @@ impl GeoTiff {
         })
     }
 
-    pub fn get_value_at<T: FromPrimitive + 'static>(&self, x: usize, y: usize, sample: usize) -> T {
-        let GeoTiff {
-            raster_width,
-            num_samples,
-            raster_data,
-            ..
-        } = self;
+    pub fn model_extent(&self) -> Rect {
+        let offset = self.raster_offset();
+        let lower = Coord {
+            x: offset,
+            y: offset,
+        };
+        let upper = Coord {
+            x: self.raster_width as f64 + offset,
+            y: self.raster_height as f64 + offset,
+        };
 
-        if &sample >= num_samples {
-            panic!(
-                "sample out of bounds: the number of samples is {} but the sample is {}",
-                num_samples, sample
+        if let Some(coordinate_transform) = &self.coordinate_transform {
+            Rect::new(
+                coordinate_transform.transform_to_model(&lower),
+                coordinate_transform.transform_to_model(&upper),
             )
+        } else {
+            Rect::new(lower, upper)
         }
+    }
 
-        let index = (y * raster_width + x) * num_samples + sample;
-        match raster_data {
+    pub fn get_value_at<T: FromPrimitive + 'static>(
+        &self,
+        coord: &Coord,
+        sample: usize,
+    ) -> Option<T> {
+        let index = self.compute_index(coord, sample)?;
+
+        Some(match &self.raster_data {
             RasterData::U8(data) => unwrap_primitive_type!(T::from_u8(data[index]), u8, T),
             RasterData::U16(data) => unwrap_primitive_type!(T::from_u16(data[index]), u16, T),
             RasterData::U32(data) => unwrap_primitive_type!(T::from_u32(data[index]), u32, T),
@@ -110,6 +122,49 @@ impl GeoTiff {
             RasterData::I16(data) => unwrap_primitive_type!(T::from_i16(data[index]), i16, T),
             RasterData::I32(data) => unwrap_primitive_type!(T::from_i32(data[index]), i32, T),
             RasterData::I64(data) => unwrap_primitive_type!(T::from_i64(data[index]), i64, T),
+        })
+    }
+
+    fn compute_index(&self, coord: &Coord, sample: usize) -> Option<usize> {
+        let GeoTiff {
+            raster_width,
+            raster_height,
+            num_samples,
+            coordinate_transform,
+            ..
+        } = self;
+
+        if &sample >= num_samples {
+            panic!(
+                "sample out of bounds: the number of samples is {} but the sample is {}",
+                num_samples, sample
+            )
+        }
+
+        let mut coord = match coordinate_transform {
+            None => *coord,
+            Some(transform) => transform.transform_to_raster(coord),
+        };
+
+        let raster_offset = self.raster_offset();
+        coord.x -= raster_offset;
+        coord.y -= raster_offset;
+
+        if coord.x < 0.0
+            || coord.x >= *raster_width as f64
+            || coord.y < 0.0
+            || coord.y >= *raster_height as f64
+        {
+            return None;
+        }
+
+        Some((coord.y as usize * raster_width + coord.x as usize) * num_samples + sample)
+    }
+
+    fn raster_offset(&self) -> f64 {
+        match self.geo_key_directory.raster_type {
+            Some(RasterType::RasterPixelIsPoint) => -0.5,
+            _ => 0.0,
         }
     }
 }

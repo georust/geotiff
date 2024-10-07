@@ -1,4 +1,7 @@
+use geo_types::Coord;
 use tiff::{TiffError, TiffFormatError, TiffResult};
+
+mod tie_point_and_pixel_scale;
 
 const MODEL_TIE_POINT_TAG: &str = "ModelTiePointTag";
 const MODEL_PIXEL_SCALE_TAG: &str = "ModelPixelScaleTag";
@@ -7,7 +10,11 @@ const MODEL_TRANSFORMATION_TAG: &str = "ModelTransformationTag";
 #[derive(Debug)]
 pub(super) enum CoordinateTransform {
     AffineTransform,
-    TiePointAndPixelScale,
+    TiePointAndPixelScale {
+        raster_point: Coord,
+        model_point: Coord,
+        pixel_scale: Coord,
+    },
     TiePoints,
 }
 
@@ -81,10 +88,42 @@ impl CoordinateTransform {
                     )));
                 };
 
-                Ok(Self::TiePointAndPixelScale)
+                Self::from_tie_point_and_pixel_scale(&tie_points, &pixel_scale)
             } else {
                 Ok(Self::TiePoints)
             }
+        }
+    }
+
+    pub fn transform_to_model(&self, coord: &Coord) -> Coord {
+        match self {
+            CoordinateTransform::TiePointAndPixelScale {
+                raster_point,
+                model_point,
+                pixel_scale,
+            } => Self::transform_to_model_by_tie_point_and_pixel_scale(
+                raster_point,
+                model_point,
+                pixel_scale,
+                coord,
+            ),
+            _ => unimplemented!()
+        }
+    }
+
+    pub(super) fn transform_to_raster(&self, coord: &Coord) -> Coord {
+        match self {
+            CoordinateTransform::TiePointAndPixelScale {
+                raster_point,
+                model_point,
+                pixel_scale,
+            } => Self::transform_to_raster_by_tie_point_and_pixel_scale(
+                raster_point,
+                model_point,
+                pixel_scale,
+                coord,
+            ),
+            _ => unimplemented!()
         }
     }
 }
