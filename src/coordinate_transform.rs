@@ -1,8 +1,12 @@
+use std::rc::Rc;
 use geo_types::Coord;
+use rstar::RTree;
 use tiff::{TiffError, TiffFormatError, TiffResult};
+use crate::coordinate_transform::tie_points::{Face, TreeItem};
 
 mod affine_transform;
 mod tie_point_and_pixel_scale;
+mod tie_points;
 
 const MODEL_TIE_POINT_TAG: &str = "ModelTiePointTag";
 const MODEL_PIXEL_SCALE_TAG: &str = "ModelPixelScaleTag";
@@ -19,7 +23,12 @@ pub enum CoordinateTransform {
         model_point: Coord,
         pixel_scale: Coord,
     },
-    TiePoints,
+    TiePoints {
+        raster_mesh: Rc<Vec<Face>>,
+        raster_index: RTree<TreeItem>,
+        model_mesh: Rc<Vec<Face>>,
+        model_index: RTree<TreeItem>,
+    },
 }
 
 impl CoordinateTransform {
@@ -94,7 +103,7 @@ impl CoordinateTransform {
 
                 Self::from_tie_point_and_pixel_scale(&tie_points, &pixel_scale)
             } else {
-                Ok(Self::TiePoints)
+                Self::from_tie_points(&tie_points)
             }
         }
     }
@@ -114,7 +123,12 @@ impl CoordinateTransform {
                 pixel_scale,
                 coord,
             ),
-            _ => unimplemented!()
+            CoordinateTransform::TiePoints {
+                model_mesh,
+                raster_index,
+                ..
+            } => Self::transform_by_tie_points(raster_index, model_mesh, coord),
+
         }
     }
 
@@ -133,7 +147,11 @@ impl CoordinateTransform {
                 pixel_scale,
                 coord,
             ),
-            _ => unimplemented!()
+            CoordinateTransform::TiePoints {
+                model_index,
+                raster_mesh,
+                ..
+            } => Self::transform_by_tie_points(model_index, raster_mesh, coord),
         }
     }
 }

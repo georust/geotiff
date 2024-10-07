@@ -241,6 +241,22 @@ fn test_transform_by_model_transformation_pixel_is_point() {
     )
 }
 
+#[test]
+fn test_transform_by_model_tie_points_pixel_is_area() {
+    test_transform(
+        "resources/austrian_capitals_model_tie_points_pixel_is_area.tif",
+        RasterType::RasterPixelIsArea,
+    )
+}
+
+#[test]
+fn test_transform_by_model_tie_points_pixel_is_point() {
+    test_transform(
+        "resources/austrian_capitals_model_tie_points_pixel_is_point.tif",
+        RasterType::RasterPixelIsPoint,
+    )
+}
+
 fn test_transform<P: AsRef<Path>>(path: P, raster_type: RasterType) {
     let geotiff = read_geotiff(path);
 
