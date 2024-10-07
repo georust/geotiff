@@ -3,7 +3,10 @@ name = "geotiff"
 description = "A GeoTIFF library for Rust"
 version = "0.0.2"
 edition = "2021"
-authors = ["Dominik Bucher <dobucher@ethz.ch>"]
+authors = [
+    "Dominik Bucher <dobucher@ethz.ch>",
+    "Gunnar Schulze <gunnar.schulze@gmail.com>"
+]
 repository = "https://github.com/georust/geotiff"
 
 [dependencies]
