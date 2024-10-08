@@ -2,8 +2,9 @@ use std::array;
 use std::rc::Rc;
 
 use delaunator::{Point, Triangulation};
+use geo_index::rtree::sort::STRSort;
+use geo_index::rtree::{OwnedRTree, RTreeBuilder, RTreeIndex};
 use geo_types::Coord;
-use rstar::{RTree, RTreeObject, AABB};
 use tiff::TiffResult;
 
 use crate::coordinate_transform::CoordinateTransform;
@@ -28,20 +29,14 @@ impl CoordinateTransform {
         let triangulation = delaunator::triangulate(&raster_points);
         let raster_mesh = Rc::new(Self::build_faces(raster_points, &triangulation));
         let model_mesh = Rc::new(Self::build_faces(model_points, &triangulation));
+        let raster_index = Self::build_index(&raster_mesh);
+        let model_index = Self::build_index(&model_mesh);
 
         Ok(Self::TiePoints {
             raster_mesh: raster_mesh.clone(),
-            raster_index: RTree::bulk_load(
-                (0..raster_mesh.len())
-                    .map(|index| TreeItem::new(raster_mesh.clone(), index))
-                    .collect(),
-            ),
+            raster_index,
             model_mesh: model_mesh.clone(),
-            model_index: RTree::bulk_load(
-                (0..model_mesh.len())
-                    .map(|index| TreeItem::new(model_mesh.clone(), index))
-                    .collect(),
-            ),
+            model_index,
         })
     }
 
@@ -175,17 +170,28 @@ impl CoordinateTransform {
             .collect()
     }
 
+    fn build_index(mesh: &[Face]) -> OwnedRTree<f64> {
+        let mut builder = RTreeBuilder::new(mesh.len());
+        for face in mesh.iter() {
+            let (min_x, min_y, max_x, max_y) = face.compute_envelope();
+            builder.add(min_x, min_y, max_x, max_y);
+        }
+        builder.finish::<STRSort>()
+    }
+
     pub(super) fn transform_by_tie_points(
-        source_index: &RTree<TreeItem>,
+        source_index: &OwnedRTree<f64>,
+        source_mesh: &Rc<Vec<Face>>,
         target_mesh: &Rc<Vec<Face>>,
         coord: &Coord,
     ) -> Coord {
-        let TreeItem { mesh, index, .. } = source_index
-            .locate_in_envelope_intersecting(&AABB::from_point(*coord))
-            .find(|TreeItem { mesh, index, .. }| mesh[*index].contains(coord))
+        let index = source_index
+            .search(coord.x, coord.y, coord.x, coord.y)
+            .into_iter()
+            .find(|face_index| source_mesh[*face_index].contains(coord))
             .unwrap();
-        let uv = mesh[*index].locate(coord);
-        target_mesh[*index].interpolate(uv)
+        let uv = source_mesh[index].locate(coord);
+        target_mesh[index].interpolate(uv)
     }
 }
 
@@ -239,6 +245,65 @@ impl Face {
             y: -u * a.y - v * a.y + a.y + u * b.y + v * c.y,
         }
     }
+
+    fn compute_envelope(&self) -> (f64, f64, f64, f64) {
+        let Some(boundary) = &self.boundary else {
+            return (f64::MIN, f64::MIN, f64::MAX, f64::MAX);
+        };
+
+        let mut min_x = f64::MAX;
+        let mut min_y = f64::MAX;
+        let mut max_x = f64::MIN;
+        let mut max_y = f64::MIN;
+
+        let mut update_envelope = |coords: &[Coord]| {
+            for c in coords {
+                if c.x < min_x {
+                    min_x = c.x;
+                }
+                if c.x > min_x {
+                    min_x = c.x;
+                }
+                if c.y < min_x {
+                    min_x = c.y;
+                }
+                if c.y > min_x {
+                    min_x = c.y;
+                }
+            }
+        };
+
+        match boundary {
+            Boundary::Open {
+                coords,
+                from_direction,
+                to_direction,
+            } => {
+                update_envelope(coords);
+
+                for direction in [from_direction, to_direction] {
+                    // Compute right-hand side normal vector
+                    let nx = direction.y;
+                    let ny = -direction.x;
+
+                    if nx.is_sign_positive() {
+                        max_x = f64::MAX;
+                    } else {
+                        min_x = f64::MIN;
+                    }
+
+                    if ny.is_sign_positive() {
+                        max_y = f64::MAX;
+                    } else {
+                        min_y = f64::MIN;
+                    }
+                }
+            }
+            Boundary::Closed { coords } => update_envelope(coords),
+        }
+
+        (min_x, min_y, max_x, max_y)
+    }
 }
 
 #[derive(Debug)]
@@ -251,100 +316,6 @@ enum Boundary {
     Closed {
         coords: Vec<Coord>,
     },
-}
-
-#[derive(Debug)]
-pub struct TreeItem {
-    mesh: Rc<Vec<Face>>,
-    index: usize,
-    envelope: AABB<Coord>,
-}
-
-impl TreeItem {
-    fn new(mesh: Rc<Vec<Face>>, index: usize) -> Self {
-        let envelope = Self::compute_envelope(&mesh[index]);
-        Self {
-            mesh,
-            index,
-            envelope,
-        }
-    }
-
-    fn compute_envelope(face: &Face) -> AABB<Coord> {
-        let Some(boundary) = &face.boundary else {
-            return AABB::from_corners(
-                Coord {
-                    x: f64::MIN,
-                    y: f64::MIN,
-                },
-                Coord {
-                    x: f64::MAX,
-                    y: f64::MAX,
-                },
-            );
-        };
-
-        match boundary {
-            Boundary::Open {
-                coords,
-                from_direction,
-                to_direction,
-            } => {
-                let mut lower = Coord {
-                    x: f64::MAX,
-                    y: f64::MAX,
-                };
-                let mut upper = Coord {
-                    x: f64::MIN,
-                    y: f64::MIN,
-                };
-
-                for c in coords {
-                    if c.x < lower.x {
-                        lower.x = c.x;
-                    }
-                    if c.x > upper.x {
-                        upper.x = c.x;
-                    }
-                    if c.y < lower.y {
-                        lower.y = c.y;
-                    }
-                    if c.y > upper.y {
-                        upper.y = c.y;
-                    }
-                }
-
-                for direction in [from_direction, to_direction] {
-                    // Compute right-hand side normal vector
-                    let nx = direction.y;
-                    let ny = -direction.x;
-
-                    if nx.is_sign_positive() {
-                        upper.x = f64::MAX;
-                    } else {
-                        lower.x = f64::MIN;
-                    }
-
-                    if ny.is_sign_positive() {
-                        upper.y = f64::MAX;
-                    } else {
-                        lower.y = f64::MIN;
-                    }
-                }
-
-                AABB::from_corners(lower, upper)
-            }
-            Boundary::Closed { coords } => AABB::from_points(coords),
-        }
-    }
-}
-
-impl RTreeObject for TreeItem {
-    type Envelope = AABB<Coord>;
-
-    fn envelope(&self) -> Self::Envelope {
-        self.envelope
-    }
 }
 
 pub(crate) trait CoordExt {

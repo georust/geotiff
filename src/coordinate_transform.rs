@@ -1,8 +1,10 @@
 use std::rc::Rc;
+
+use geo_index::rtree::OwnedRTree;
 use geo_types::Coord;
-use rstar::RTree;
 use tiff::{TiffError, TiffFormatError, TiffResult};
-use crate::coordinate_transform::tie_points::{Face, TreeItem};
+
+use crate::coordinate_transform::tie_points::Face;
 
 mod affine_transform;
 mod tie_point_and_pixel_scale;
@@ -25,9 +27,9 @@ pub enum CoordinateTransform {
     },
     TiePoints {
         raster_mesh: Rc<Vec<Face>>,
-        raster_index: RTree<TreeItem>,
+        raster_index: OwnedRTree<f64>,
         model_mesh: Rc<Vec<Face>>,
-        model_index: RTree<TreeItem>,
+        model_index: OwnedRTree<f64>,
     },
 }
 
@@ -124,11 +126,11 @@ impl CoordinateTransform {
                 coord,
             ),
             CoordinateTransform::TiePoints {
-                model_mesh,
                 raster_index,
+                raster_mesh,
+                model_mesh,
                 ..
-            } => Self::transform_by_tie_points(raster_index, model_mesh, coord),
-
+            } => Self::transform_by_tie_points(raster_index, raster_mesh, model_mesh, coord),
         }
     }
 
@@ -149,9 +151,10 @@ impl CoordinateTransform {
             ),
             CoordinateTransform::TiePoints {
                 model_index,
+                model_mesh,
                 raster_mesh,
                 ..
-            } => Self::transform_by_tie_points(model_index, raster_mesh, coord),
+            } => Self::transform_by_tie_points(model_index, model_mesh, raster_mesh, coord),
         }
     }
 }

@@ -11,10 +11,10 @@ repository = "https://github.com/georust/geotiff"
 
 [dependencies]
 delaunator = "1.0"
-geo-types = { version = "0.7", features = ["approx", "rstar_0_12"] }
+geo-index = "0.1"
+geo-types = { version = "0.7" }
 num_enum = "0.7"
 num-traits = "0.2"
-rstar = "0.12"
 tiff = "0.9"
 
 [dev-dependencies]
