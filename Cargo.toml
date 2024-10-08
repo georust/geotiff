@@ -10,3 +10,6 @@ repository = "https://github.com/georust/geotiff"
 num_enum = "0.7"
 num-traits = "0.2"
 tiff = "0.9"
+
+[dev-dependencies]
+criterion = "0.5.1"
