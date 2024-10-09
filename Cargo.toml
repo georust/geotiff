@@ -10,8 +10,8 @@ authors = [
 repository = "https://github.com/georust/geotiff"
 
 [dependencies]
-delaunator = "1.0"
-geo-index = "0.1"
+delaunator = { version = "1.0", optional = true }
+geo-index = { version = "0.1", optional = true }
 geo-types = { version = "0.7" }
 num_enum = "0.7"
 num-traits = "0.2"
@@ -19,3 +19,6 @@ tiff = "0.9"
 
 [dev-dependencies]
 proj = "0.27"
+
+[features]
+tie-points = ["dep:delaunator", "dep:geo-index"]

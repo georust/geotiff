@@ -1,13 +1,17 @@
+#[cfg(feature = "tie-points")]
 use std::rc::Rc;
 
+#[cfg(feature = "tie-points")]
 use geo_index::rtree::OwnedRTree;
 use geo_types::Coord;
 use tiff::{TiffError, TiffFormatError, TiffResult};
 
+#[cfg(feature = "tie-points")]
 use crate::coordinate_transform::tie_points::Face;
 
 mod affine_transform;
 mod tie_point_and_pixel_scale;
+#[cfg(feature = "tie-points")]
 mod tie_points;
 
 const MODEL_TIE_POINT_TAG: &str = "ModelTiePointTag";
@@ -25,6 +29,7 @@ pub enum CoordinateTransform {
         model_point: Coord,
         pixel_scale: Coord,
     },
+    #[cfg(feature = "tie-points")]
     TiePoints {
         raster_mesh: Rc<Vec<Face>>,
         raster_index: OwnedRTree<f64>,
@@ -105,7 +110,16 @@ impl CoordinateTransform {
 
                 Self::from_tie_point_and_pixel_scale(&tie_points, &pixel_scale)
             } else {
-                Self::from_tie_points(&tie_points)
+                #[cfg(feature = "tie-points")]
+                {
+                    Self::from_tie_points(&tie_points)
+                }
+                #[cfg(not(feature = "tie-points"))]
+                {
+                    Err(TiffError::FormatError(TiffFormatError::Format(
+                        "Transformation by tie points is not supported".into(),
+                    )))
+                }
             }
         }
     }
@@ -125,6 +139,7 @@ impl CoordinateTransform {
                 pixel_scale,
                 coord,
             ),
+            #[cfg(feature = "tie-points")]
             CoordinateTransform::TiePoints {
                 raster_index,
                 raster_mesh,
@@ -149,6 +164,7 @@ impl CoordinateTransform {
                 pixel_scale,
                 coord,
             ),
+            #[cfg(feature = "tie-points")]
             CoordinateTransform::TiePoints {
                 model_index,
                 model_mesh,

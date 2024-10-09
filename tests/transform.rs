@@ -98,6 +98,7 @@ fn test_transform_by_model_transformation_pixel_is_point() {
     )
 }
 
+#[cfg(feature = "tie-points")]
 #[test]
 fn test_transform_by_model_tie_points_pixel_is_area() {
     test_transform(
@@ -106,6 +107,7 @@ fn test_transform_by_model_tie_points_pixel_is_area() {
     )
 }
 
+#[cfg(feature = "tie-points")]
 #[test]
 fn test_transform_by_model_tie_points_pixel_is_point() {
     test_transform(
