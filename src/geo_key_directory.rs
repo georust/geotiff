@@ -12,7 +12,7 @@ pub struct GeoKeyDirectory {
     pub key_revision: u16,
     pub minor_revision: u16,
     pub model_type: Option<u16>,
-    pub raster_type: Option<u16>,
+    pub raster_type: Option<RasterType>,
     pub citation: Option<String>,
     pub geographic_type: Option<u16>,
     pub geog_citation: Option<String>,
@@ -99,8 +99,13 @@ impl GeoKeyDirectory {
                         Self::get_short(key_tag, location_tag, *count, *value_or_offset)?.into()
                 }
                 GeoKeyDirectoryTag::RasterType => {
-                    directory.raster_type =
-                        Self::get_short(key_tag, location_tag, *count, *value_or_offset)?.into()
+                    let raster_type =
+                        Self::get_short(key_tag, location_tag, *count, *value_or_offset)?;
+                    directory.raster_type = Some(RasterType::try_from(raster_type).map_err(|_| {
+                        TiffError::FormatError(TiffFormatError::Format(format!(
+                            "Unknown raster type: {raster_type}"
+                        )))
+                    })?)
                 }
                 GeoKeyDirectoryTag::Citation => {
                     directory.citation = Self::get_string(
@@ -656,4 +661,11 @@ enum GeoKeyDirectoryTag {
     VerticalCitation = 4097,
     VerticalDatum = 4098,
     VerticalUnits = 4099,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[repr(u16)]
+pub enum RasterType {
+    RasterPixelIsArea = 1,
+    RasterPixelIsPoint = 2,
 }
