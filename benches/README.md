@@ -1,6 +1,8 @@
 # Benchmarks
 
-Measure the throughput of reading/writing GeoTIFF files using this library!
+[![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/georust/geotiff)
+
+Measure the throughput of reading GeoTIFF files using this crate!
 
 Steps to run:
 
