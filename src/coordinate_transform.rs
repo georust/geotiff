@@ -18,6 +18,9 @@ const MODEL_TIE_POINT_TAG: &str = "ModelTiePointTag";
 const MODEL_PIXEL_SCALE_TAG: &str = "ModelPixelScaleTag";
 const MODEL_TRANSFORMATION_TAG: &str = "ModelTransformationTag";
 
+/// Defines the transformation between raster space and model space.
+///
+/// Ref: https://docs.ogc.org/is/19-008r4/19-008r4.html#_raster_to_model_coordinate_transformation_requirements
 #[derive(Debug)]
 pub enum CoordinateTransform {
     AffineTransform {
