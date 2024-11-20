@@ -1,6 +1,7 @@
 //! A [GeoTIFF](https://www.ogc.org/standard/geotiff) library for Rust
 use std::any::type_name;
 use std::io::{Read, Seek};
+
 use geo_types::{Coord, Rect};
 use num_traits::FromPrimitive;
 use tiff::decoder::{Decoder, DecodingResult};
@@ -46,6 +47,7 @@ pub struct GeoTiff {
 }
 
 impl GeoTiff {
+    /// Reads a GeoTIFF from the given source.
     pub fn read<R: Read + Seek>(reader: R) -> TiffResult<Self> {
         let mut decoder = Decoder::new(reader)?;
 
@@ -83,6 +85,7 @@ impl GeoTiff {
         })
     }
 
+    /// Returns the extent of the image in model space.
     pub fn model_extent(&self) -> Rect {
         let offset = self.raster_offset();
         let lower = Coord {
@@ -104,6 +107,8 @@ impl GeoTiff {
         }
     }
 
+    /// Returns the value at the given location for the specified sample.
+    /// The coordinates are in model space.
     pub fn get_value_at<T: FromPrimitive + 'static>(
         &self,
         coord: &Coord,
