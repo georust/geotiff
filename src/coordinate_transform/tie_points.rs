@@ -258,18 +258,10 @@ impl Face {
 
         let mut update_envelope = |coords: &[Coord]| {
             for c in coords {
-                if c.x < min_x {
-                    min_x = c.x;
-                }
-                if c.x > min_x {
-                    min_x = c.x;
-                }
-                if c.y < min_x {
-                    min_x = c.y;
-                }
-                if c.y > min_x {
-                    min_x = c.y;
-                }
+                min_x = min_x.min(c.x);
+                min_y = min_y.min(c.y);
+                max_x = max_x.max(c.x);
+                max_y = max_y.max(c.y);
             }
         };
 
