@@ -151,6 +151,7 @@ impl GeoTiff {
             Some(transform) => transform.transform_to_raster(coord),
         };
 
+        // See https://docs.ogc.org/is/19-008r4/19-008r4.html#_raster_space for reference
         let raster_offset = self.raster_offset();
         coord.x -= raster_offset;
         coord.y -= raster_offset;
