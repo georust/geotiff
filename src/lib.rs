@@ -19,7 +19,7 @@ mod decoder_ext;
 mod geo_key_directory;
 mod raster_data;
 
-macro_rules! unwrap_primitive_type {
+macro_rules! unwrap_type_cast {
     ($result: expr, $actual: ty, $expected: ty) => {
         $result
             .ok_or_else(|| {
@@ -31,6 +31,23 @@ macro_rules! unwrap_primitive_type {
             })
             .unwrap()
     };
+}
+
+/// The raster value type that can be read from a GeoTIFF.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RasterDataType {
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    I8,
+    I16,
+    I32,
+    I64,
+    CInt16,
+    CInt32,
 }
 
 /// The basic GeoTIFF struct. This includes any metadata as well as the actual raster data.
@@ -73,6 +90,9 @@ impl GeoTiff {
             DecodingResult::I16(data) => RasterData::I16(data),
             DecodingResult::I32(data) => RasterData::I32(data),
             DecodingResult::I64(data) => RasterData::I64(data),
+            DecodingResult::F16(data) => todo!(),
+            DecodingResult::CInt16(data) => RasterData::Cint16(data),
+            DecodingResult::CInt32(data) => RasterData::Cint32(data),
         };
 
         Ok(Self {
@@ -83,6 +103,24 @@ impl GeoTiff {
             coordinate_transform,
             raster_data,
         })
+    }
+
+    /// Returns the sample type of the raster data.
+    pub fn sample_type(&self) -> RasterDataType {
+        match &self.raster_data {
+            RasterData::U8(_) => RasterDataType::U8,
+            RasterData::U16(_) => RasterDataType::U16,
+            RasterData::U32(_) => RasterDataType::U32,
+            RasterData::U64(_) => RasterDataType::U64,
+            RasterData::F32(_) => RasterDataType::F32,
+            RasterData::F64(_) => RasterDataType::F64,
+            RasterData::I8(_) => RasterDataType::I8,
+            RasterData::I16(_) => RasterDataType::I16,
+            RasterData::I32(_) => RasterDataType::I32,
+            RasterData::I64(_) => RasterDataType::I64,
+            RasterData::Cint16(_) => RasterDataType::CInt16,
+            RasterData::Cint32(_) => RasterDataType::CInt32,
+        }
     }
 
     /// Returns the extent of the image in model space.
@@ -109,25 +147,42 @@ impl GeoTiff {
 
     /// Returns the value at the given location for the specified sample.
     /// The coordinates are in model space.
-    pub fn get_value_at<T: FromPrimitive + 'static>(
-        &self,
-        coord: &Coord,
-        sample: usize,
-    ) -> Option<T> {
+    pub fn get_value_at(&self, coord: &Coord, sample: usize) -> Option<RasterValue> {
         let index = self.compute_index(coord, sample)?;
+        let value = self.raster_data.get_value(index);
+        Some(value)
+    }
 
-        Some(match &self.raster_data {
-            RasterData::U8(data) => unwrap_primitive_type!(T::from_u8(data[index]), u8, T),
-            RasterData::U16(data) => unwrap_primitive_type!(T::from_u16(data[index]), u16, T),
-            RasterData::U32(data) => unwrap_primitive_type!(T::from_u32(data[index]), u32, T),
-            RasterData::U64(data) => unwrap_primitive_type!(T::from_u64(data[index]), u64, T),
-            RasterData::F32(data) => unwrap_primitive_type!(T::from_f32(data[index]), f32, T),
-            RasterData::F64(data) => unwrap_primitive_type!(T::from_f64(data[index]), f64, T),
-            RasterData::I8(data) => unwrap_primitive_type!(T::from_i8(data[index]), i8, T),
-            RasterData::I16(data) => unwrap_primitive_type!(T::from_i16(data[index]), i16, T),
-            RasterData::I32(data) => unwrap_primitive_type!(T::from_i32(data[index]), i32, T),
-            RasterData::I64(data) => unwrap_primitive_type!(T::from_i64(data[index]), i64, T),
-        })
+    /// Returns the value at the given pixel coordinates for the specified sample.
+    /// The coordinates are in pixel space (0-based).
+    pub fn get_value_at_pixel(&self, x: usize, y: usize, sample: usize) -> Option<RasterValue> {
+        let GeoTiff {
+            raster_width,
+            raster_height,
+            num_samples,
+            ..
+        } = self;
+
+        // Check bounds
+        if x >= *raster_width || y >= *raster_height {
+            return None;
+        }
+
+        // Check sample bounds
+        if sample >= *num_samples {
+            panic!(
+                "sample out of bounds: the number of samples is {} but the sample is {}",
+                num_samples, sample
+            );
+        }
+
+        // Compute index directly from pixel coordinates
+        let index = (y * raster_width + x) * num_samples + sample;
+
+        // Get the value from the appropriate data array
+        let value = self.raster_data.get_value(index);
+
+        Some(value)
     }
 
     fn compute_index(&self, coord: &Coord, sample: usize) -> Option<usize> {

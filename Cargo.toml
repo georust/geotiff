@@ -5,7 +5,7 @@ version = "0.0.2"
 edition = "2021"
 authors = [
     "Dominik Bucher <dobucher@ethz.ch>",
-    "Gunnar Schulze <gunnar.schulze@gmail.com>"
+    "Gunnar Schulze <gunnar.schulze@gmail.com>",
 ]
 repository = "https://github.com/georust/geotiff"
 
@@ -15,7 +15,7 @@ geo-index = { version = "0.1", optional = true }
 geo-types = { version = "0.7" }
 num_enum = "0.7"
 num-traits = "0.2"
-tiff = "0.9"
+tiff = { git = "https://github.com/vini-fda/image-tiff" }
 
 [dev-dependencies]
 proj = "0.27"
