@@ -158,6 +158,7 @@ fn test_load_merc() {
     );
 }
 
+#[cfg(feature = "tie-points")]
 #[test]
 fn test_load_sentinel1_slc_burst() {
     // Load a Sentinel-1 SLC Acquisition over Mexico City (slimmed down to 200x200 pixels)
