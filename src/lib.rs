@@ -130,6 +130,38 @@ impl GeoTiff {
         Some(value)
     }
 
+    /// Returns the value at the given pixel coordinates for the specified sample.
+    /// The coordinates are in pixel space (0-based).
+    pub fn get_value_at_pixel(&self, x: usize, y: usize, sample: usize) -> Option<RasterValue> {
+        let GeoTiff {
+            raster_width,
+            raster_height,
+            num_samples,
+            ..
+        } = self;
+
+        // Check bounds
+        if x >= *raster_width || y >= *raster_height {
+            return None;
+        }
+
+        // Check sample bounds
+        if sample >= *num_samples {
+            panic!(
+                "sample out of bounds: the number of samples is {} but the sample is {}",
+                num_samples, sample
+            );
+        }
+
+        // Compute index directly from pixel coordinates
+        let index = (y * raster_width + x) * num_samples + sample;
+
+        // Get the value from the appropriate data array
+        let value = self.raster_data.get_value(index);
+
+        Some(value)
+    }
+
     fn compute_index(&self, coord: &Coord, sample: usize) -> Option<usize> {
         let GeoTiff {
             raster_width,
