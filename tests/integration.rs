@@ -23,15 +23,21 @@ fn test_load_marbles() {
         )
     );
     assert_eq!(
-        geotiff.get_value_at::<u8>(&Coord { x: 761.0, y: 599.0 }, 0),
+        geotiff
+            .get_value_at(&Coord { x: 761.0, y: 599.0 }, 0)
+            .map(|v| v.as_u8().unwrap()),
         Some(147)
     );
     assert_eq!(
-        geotiff.get_value_at::<u8>(&Coord { x: 761.0, y: 599.0 }, 1),
+        geotiff
+            .get_value_at(&Coord { x: 761.0, y: 599.0 }, 1)
+            .map(|v| v.as_u8().unwrap()),
         Some(128)
     );
     assert_eq!(
-        geotiff.get_value_at::<u8>(&Coord { x: 761.0, y: 599.0 }, 2),
+        geotiff
+            .get_value_at(&Coord { x: 761.0, y: 599.0 }, 2)
+            .map(|v| v.as_u8().unwrap()),
         Some(165)
     );
 }
@@ -58,33 +64,39 @@ fn test_load_zh_dem_25() {
         )
     );
     assert_eq!(
-        geotiff.get_value_at::<i16>(
-            &Coord {
-                x: 677575.0,
-                y: 253000.0
-            },
-            0
-        ),
+        geotiff
+            .get_value_at(
+                &Coord {
+                    x: 677575.0,
+                    y: 253000.0
+                },
+                0
+            )
+            .map(|v| v.as_i16().unwrap()),
         Some(551)
     );
     assert_eq!(
-        geotiff.get_value_at::<i16>(
-            &Coord {
-                x: 679250.0,
-                y: 251875.0
-            },
-            0
-        ),
+        geotiff
+            .get_value_at(
+                &Coord {
+                    x: 679250.0,
+                    y: 251875.0
+                },
+                0
+            )
+            .map(|v| v.as_i16().unwrap()),
         Some(530)
     );
     assert_eq!(
-        geotiff.get_value_at::<i16>(
-            &Coord {
-                x: 685700.0,
-                y: 249450.0
-            },
-            0
-        ),
+        geotiff
+            .get_value_at(
+                &Coord {
+                    x: 685700.0,
+                    y: 249450.0
+                },
+                0
+            )
+            .map(|v| v.as_i16().unwrap()),
         Some(587)
     );
 
