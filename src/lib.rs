@@ -17,20 +17,6 @@ mod decoder_ext;
 mod geo_key_directory;
 mod raster_data;
 
-macro_rules! unwrap_type_cast {
-    ($result: expr, $actual: ty, $expected: ty) => {
-        $result
-            .ok_or_else(|| {
-                format!(
-                    "Cannot represent {} as {}",
-                    type_name::<$actual>(),
-                    type_name::<$expected>()
-                )
-            })
-            .unwrap()
-    };
-}
-
 /// The raster value type that can be read from a GeoTIFF.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RasterDataType {
@@ -44,8 +30,6 @@ pub enum RasterDataType {
     I16,
     I32,
     I64,
-    CInt16,
-    CInt32,
 }
 
 /// The basic GeoTIFF struct. This includes any metadata as well as the actual raster data.
@@ -88,9 +72,6 @@ impl GeoTiff {
             DecodingResult::I16(data) => RasterData::I16(data),
             DecodingResult::I32(data) => RasterData::I32(data),
             DecodingResult::I64(data) => RasterData::I64(data),
-            DecodingResult::F16(data) => todo!(),
-            DecodingResult::CInt16(data) => RasterData::CInt16(data),
-            DecodingResult::CInt32(data) => RasterData::CInt32(data),
         };
 
         Ok(Self {
@@ -116,8 +97,6 @@ impl GeoTiff {
             RasterData::I16(_) => RasterDataType::I16,
             RasterData::I32(_) => RasterDataType::I32,
             RasterData::I64(_) => RasterDataType::I64,
-            RasterData::CInt16(_) => RasterDataType::CInt16,
-            RasterData::CInt32(_) => RasterDataType::CInt32,
         }
     }
 
@@ -148,38 +127,6 @@ impl GeoTiff {
     pub fn get_value_at(&self, coord: &Coord, sample: usize) -> Option<RasterValue> {
         let index = self.compute_index(coord, sample)?;
         let value = self.raster_data.get_value(index);
-        Some(value)
-    }
-
-    /// Returns the value at the given pixel coordinates for the specified sample.
-    /// The coordinates are in pixel space (0-based).
-    pub fn get_value_at_pixel(&self, x: usize, y: usize, sample: usize) -> Option<RasterValue> {
-        let GeoTiff {
-            raster_width,
-            raster_height,
-            num_samples,
-            ..
-        } = self;
-
-        // Check bounds
-        if x >= *raster_width || y >= *raster_height {
-            return None;
-        }
-
-        // Check sample bounds
-        if sample >= *num_samples {
-            panic!(
-                "sample out of bounds: the number of samples is {} but the sample is {}",
-                num_samples, sample
-            );
-        }
-
-        // Compute index directly from pixel coordinates
-        let index = (y * raster_width + x) * num_samples + sample;
-
-        // Get the value from the appropriate data array
-        let value = self.raster_data.get_value(index);
-
         Some(value)
     }
 

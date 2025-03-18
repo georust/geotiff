@@ -1,8 +1,6 @@
 use std::fmt;
 use std::fmt::{Debug, Formatter};
-use std::ops::Index;
 
-use tiff::complex_int::{CInt16, CInt32};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RasterValue {
@@ -16,8 +14,6 @@ pub enum RasterValue {
     I16(i16),
     I32(i32),
     I64(i64),
-    CInt16(CInt16),
-    CInt32(CInt32),
 }
 
 impl RasterValue {
@@ -90,20 +86,6 @@ impl RasterValue {
             _ => None,
         }
     }
-
-    pub fn as_cint16(&self) -> Option<CInt16> {
-        match self {
-            RasterValue::CInt16(value) => Some(*value),
-            _ => None,
-        }
-    }
-
-    pub fn as_cint32(&self) -> Option<CInt32> {
-        match self {
-            RasterValue::CInt32(value) => Some(*value),
-            _ => None,
-        }
-    }
 }
 
 pub enum RasterData {
@@ -117,8 +99,6 @@ pub enum RasterData {
     I16(Vec<i16>),
     I32(Vec<i32>),
     I64(Vec<i64>),
-    CInt16(Vec<CInt16>),
-    CInt32(Vec<CInt32>),
 }
 
 impl Debug for RasterData {
@@ -136,8 +116,6 @@ impl Debug for RasterData {
                 RasterData::I16(_) => "i16",
                 RasterData::I32(_) => "i32",
                 RasterData::I64(_) => "i64",
-                RasterData::CInt16(_) => "ci16",
-                RasterData::CInt32(_) => "ci32",
             },
             self.len()
         ))
@@ -157,8 +135,6 @@ impl RasterData {
             RasterData::I16(data) => data.len(),
             RasterData::I32(data) => data.len(),
             RasterData::I64(data) => data.len(),
-            RasterData::CInt16(data) => data.len(),
-            RasterData::CInt32(data) => data.len(),
         }
     }
 
@@ -174,8 +150,6 @@ impl RasterData {
             RasterData::I16(data) => RasterValue::I16(data[index]),
             RasterData::I32(data) => RasterValue::I32(data[index]),
             RasterData::I64(data) => RasterValue::I64(data[index]),
-            RasterData::CInt16(data) => RasterValue::CInt16(data[index]),
-            RasterData::CInt32(data) => RasterValue::CInt32(data[index]),
         }
     }
 }

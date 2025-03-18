@@ -1,7 +1,6 @@
 use common::read_geotiff;
 use geo_types::{Coord, Rect};
-use geotiff::{GeoKeyDirectory, RasterDataType, RasterType};
-use tiff::complex_int::CInt16;
+use geotiff::{GeoKeyDirectory, RasterType};
 
 mod common;
 
@@ -156,52 +155,4 @@ fn test_load_merc() {
             }
         )
     );
-}
-
-#[cfg(feature = "tie-points")]
-#[test]
-fn test_load_sentinel1_slc_burst() {
-    // Load a Sentinel-1 SLC Acquisition over Mexico City (slimmed down to 200x200 pixels)
-    let geotiff = read_geotiff(
-        "resources/s1a-iw3-slc-vv-20151022t122546-20151022t122549-008265-00ba51-001.tif",
-    );
-
-    // Test basic properties based on GDAL info
-    assert_eq!(geotiff.raster_width, 200);
-    assert_eq!(geotiff.raster_height, 200);
-    assert_eq!(geotiff.num_samples, 1); // Single band (Band 1)
-
-    // Test coordinate transformation is NOT present (file uses GCPs)
-    assert!(geotiff.geo_key_directory.proj_coord_trans.is_none());
-
-    // Test specific CInt16 pixel values
-    assert_eq!(
-        geotiff
-            .get_value_at_pixel(100, 100, 0)
-            .map(|v| v.as_cint16().unwrap()),
-        Some(CInt16::new(74, -132))
-    );
-
-    // Test another pixel value at a different location
-    assert_eq!(
-        geotiff
-            .get_value_at_pixel(20, 20, 0)
-            .map(|v| v.as_cint16().unwrap()),
-        Some(CInt16::new(1, -2))
-    );
-
-    // Test pixel values at GCP points
-    // Taking the first GCP from GDAL info: (0,0)
-    assert_eq!(
-        geotiff
-            .get_value_at_pixel(0, 0, 0)
-            .map(|v| v.as_cint16().unwrap()),
-        Some(CInt16::new(0, 0))
-    );
-
-    // Test data type is CInt16
-    match &geotiff.sample_type() {
-        RasterDataType::CInt16 => (),
-        other => panic!("Expected CInt16 data type but got {:?}", other),
-    }
 }
