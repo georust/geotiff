@@ -1,9 +1,7 @@
 //! A [GeoTIFF](https://www.ogc.org/standard/geotiff) library for Rust
-use std::any::type_name;
 use std::io::{Read, Seek};
 
 use geo_types::{Coord, Rect};
-use num_traits::FromPrimitive;
 use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 use tiff::TiffResult;
@@ -91,8 +89,8 @@ impl GeoTiff {
             DecodingResult::I32(data) => RasterData::I32(data),
             DecodingResult::I64(data) => RasterData::I64(data),
             DecodingResult::F16(data) => todo!(),
-            DecodingResult::CInt16(data) => RasterData::Cint16(data),
-            DecodingResult::CInt32(data) => RasterData::Cint32(data),
+            DecodingResult::CInt16(data) => RasterData::CInt16(data),
+            DecodingResult::CInt32(data) => RasterData::CInt32(data),
         };
 
         Ok(Self {
@@ -118,8 +116,8 @@ impl GeoTiff {
             RasterData::I16(_) => RasterDataType::I16,
             RasterData::I32(_) => RasterDataType::I32,
             RasterData::I64(_) => RasterDataType::I64,
-            RasterData::Cint16(_) => RasterDataType::CInt16,
-            RasterData::Cint32(_) => RasterDataType::CInt32,
+            RasterData::CInt16(_) => RasterDataType::CInt16,
+            RasterData::CInt32(_) => RasterDataType::CInt32,
         }
     }
 
