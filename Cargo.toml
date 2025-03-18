@@ -19,7 +19,12 @@ num-traits = "0.2"
 tiff = "0.9"
 
 [dev-dependencies]
+criterion = "0.5.1"
 proj = "0.27"
 
 [features]
 tie-points = ["dep:delaunator", "dep:geo-index"]
+
+[[bench]]
+name = "read_geotiff"
+harness = false
