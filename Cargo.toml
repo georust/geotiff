@@ -1,13 +1,16 @@
 [package]
 name = "geotiff"
 description = "A GeoTIFF library for Rust"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2021"
 authors = [
     "Dominik Bucher <dobucher@ethz.ch>",
-    "Gunnar Schulze <gunnar.schulze@gmail.com>"
+    "Gunnar Schulze <gunnar.schulze@gmail.com>",
+    "Wei Ji Leong <weiji@developmentseed.org>",
 ]
 repository = "https://github.com/georust/geotiff"
+license = "MIT"
+readme = "README.md"
 rust-version = "1.70"
 
 [dependencies]
