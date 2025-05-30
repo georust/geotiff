@@ -29,8 +29,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Setup GitHub Actions Continuous Integration tests by @weiji14 in [#8](https://github.com/georust/geotiff/pull/8)
 
 ## New Contributors
-* @weiji14 made their first contribution in [#8](https://github.com/georust/geotiff/pull/8)
-* @gschulze made their first contribution in [#17](https://github.com/georust/geotiff/pull/17)
+* [@weiji14](https://github.com/weiji14) made their first contribution in [#8](https://github.com/georust/geotiff/pull/8)
+* [@gschulze](https://github.com/gschulze) made their first contribution in [#17](https://github.com/georust/geotiff/pull/17)
 
 https://github.com/georust/geotiff/compare/v0.0.1..v0.1.0
 
@@ -51,8 +51,8 @@ https://github.com/georust/geotiff/compare/v0.0.1..v0.1.0
 - Initial commit, reading header info, such as magic number, byte ordering, IFD. by @dominikbucher
 
 ## New Contributors
-* @frewsxcv made their first contribution
-* @dominikbucher made their first contribution
+* [@frewsxcv](https://github.com/frewsxcv) made their first contribution
+* [@dominikbucher](https://github.com/dominikbucher) made their first contribution
 
 https://github.com/georust/geotiff/compare/c00819eb0d8e9f91221fd9881e907e21754603c9..v0.0.1
 
