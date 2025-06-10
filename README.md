@@ -30,11 +30,12 @@ The library exposes a `GeoTiff` struct that can be used to open GeoTIFFs and int
 ```rust
 use geotiff::GeoTiff;
 
-let reader = GeoTiff::read("geotiff.tif");
+let reader = GeoTiff::read("geotiff.tif")?;
 ```
 
-`GeoTiff::read(...)` returns an `Option`, depending if the read operation was successful
-or not. Individual values can then be read (for the moment, only at pixels) using:
+`GeoTiff::read(...)` returns a `TiffResult<GeoTiff>`, and depending on whether the read
+operation was successful or not, individual values can then be read (for the moment,
+only at pixels) using:
 
 ```rust
 use geo_types::Coord;
