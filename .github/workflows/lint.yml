@@ -1,4 +1,4 @@
-name: Clippy check
+name: Lint
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup rust toolchain, cache and cargo-codspeed binary
+      - name: Setup rust toolchain, cache and cargo-docs-rs binary
         uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
         with:
           channel: nightly
