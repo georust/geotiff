@@ -152,7 +152,7 @@ impl CoordinateTransform {
         }
     }
 
-    pub(super) fn transform_to_raster(&self, coord: &Coord) -> Coord {
+    pub fn transform_to_raster(&self, coord: &Coord) -> Coord {
         match self {
             CoordinateTransform::AffineTransform {
                 inverse_transform, ..
