@@ -8,17 +8,15 @@ use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 use tiff::TiffResult;
 
-pub use crate::geo_key_directory::*;
-pub use crate::coordinate_transform::*;
-pub use crate::decoder_ext::*;
-use crate::raster_data::*;
+pub use crate::geo_key_directory::{GeoKeyDirectory, RasterType};
+pub use crate::coordinate_transform::CoordinateTransform;
+pub use crate::decoder_ext::DecoderExt;
+use crate::raster_data::RasterData;
 
 mod coordinate_transform;
 mod decoder_ext;
 mod geo_key_directory;
 mod raster_data;
-
-pub use decoder_ext::DecoderExt;
 
 macro_rules! unwrap_primitive_type {
     ($result: expr, $actual: ty, $expected: ty) => {
