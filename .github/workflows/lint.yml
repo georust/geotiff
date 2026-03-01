@@ -2,23 +2,45 @@ name: Clippy check
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    types: [ opened, reopened, synchronize ]
-    branches: [ "main" ]
+    types: [opened, reopened, synchronize]
+    branches: ["main"]
 
 # Make sure CI fails on all warnings, including Clippy lints
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-Dwarnings"
 
+permissions: {}
+
 jobs:
+  docs_rs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup rust toolchain, cache and cargo-codspeed binary
+        uses: moonrepo/setup-rust@ede6de059f8046a5e236c94046823e2af11ca670 # v1.2.2
+        with:
+          channel: nightly
+          bins: cargo-docs-rs
+
+      - name: Test docs.rs build
+        run: cargo docs-rs
+
   clippy_check:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features
