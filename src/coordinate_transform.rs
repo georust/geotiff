@@ -1,10 +1,11 @@
+use std::io::Error;
 #[cfg(feature = "tie-points")]
 use std::rc::Rc;
 
 #[cfg(feature = "tie-points")]
 use geo_index::rtree::OwnedRTree;
 use geo_types::Coord;
-use tiff::{TiffError, TiffFormatError, TiffResult};
+use tiff::{TiffError, TiffResult};
 
 #[cfg(feature = "tie-points")]
 use crate::coordinate_transform::tie_points::Face;
@@ -50,7 +51,7 @@ impl CoordinateTransform {
         let pixel_scale = pixel_scale_data
             .map(|data| {
                 <[f64; 3]>::try_from(data).map_err(|_| {
-                    TiffError::FormatError(TiffFormatError::Format(format!(
+                    TiffError::IoError(Error::other(format!(
                         "Number values in {MODEL_PIXEL_SCALE_TAG} must be equal to 3"
                     )))
                 })
@@ -60,13 +61,13 @@ impl CoordinateTransform {
             .map(|data| {
                 let len = data.len();
                 if len == 0 {
-                    return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+                    return Err(TiffError::IoError(Error::other(format!(
                         "Number of values in {MODEL_TIE_POINT_TAG} must be greater than 0"
                     ))));
                 }
 
                 if len % 6 != 0 {
-                    return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+                    return Err(TiffError::IoError(Error::other(format!(
                         "Number of values in {MODEL_TIE_POINT_TAG} must be divisible by 6"
                     ))));
                 }
@@ -77,7 +78,7 @@ impl CoordinateTransform {
         let transformation_matrix = model_transformation_data
             .map(|data| {
                 <[f64; 16]>::try_from(data).map_err(|_| {
-                    TiffError::FormatError(TiffFormatError::Format(format!(
+                    TiffError::IoError(Error::other(format!(
                         "Number of values in {MODEL_TRANSFORMATION_TAG} must be equal to 16"
                     )))
                 })
@@ -86,12 +87,12 @@ impl CoordinateTransform {
 
         if let Some(transformation_matrix) = transformation_matrix {
             if pixel_scale.is_some() {
-                return Err(TiffError::FormatError(TiffFormatError::Format(
+                return Err(TiffError::IoError(Error::other(
                     format!("{MODEL_PIXEL_SCALE_TAG} must not be specified when {MODEL_TRANSFORMATION_TAG} is present"),
                 )));
             }
             if tie_points.is_some() {
-                return Err(TiffError::FormatError(TiffFormatError::Format(
+                return Err(TiffError::IoError(Error::other(
                     format!("{MODEL_TIE_POINT_TAG} must not be specified when {MODEL_TRANSFORMATION_TAG} is present"),
                 )));
             }
@@ -99,14 +100,14 @@ impl CoordinateTransform {
             Self::from_transformation_matrix(transformation_matrix)
         } else {
             let Some(tie_points) = tie_points else {
-                return Err(TiffError::FormatError(TiffFormatError::Format(
+                return Err(TiffError::IoError(Error::other(
                     format!("{MODEL_TIE_POINT_TAG} must be present when {MODEL_TRANSFORMATION_TAG} is missing"),
                 )));
             };
 
             if tie_points.len() == 6 {
                 let Some(pixel_scale) = pixel_scale else {
-                    return Err(TiffError::FormatError(TiffFormatError::Format(
+                    return Err(TiffError::IoError(Error::other(
                         format!("{MODEL_PIXEL_SCALE_TAG} must be specified when {MODEL_TIE_POINT_TAG} contains 6 values"),
                     )));
                 };
@@ -119,8 +120,8 @@ impl CoordinateTransform {
                 }
                 #[cfg(not(feature = "tie-points"))]
                 {
-                    Err(TiffError::FormatError(TiffFormatError::Format(
-                        "Transformation by tie points is not supported".into(),
+                    Err(TiffError::IoError(Error::other(
+                        "Transformation by tie points is not supported".to_string(),
                     )))
                 }
             }
