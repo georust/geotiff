@@ -7,7 +7,7 @@ use tiff::TiffResult;
 use crate::coordinate_transform::CoordinateTransform;
 use crate::geo_key_directory::GeoKeyDirectory;
 
-pub(super) trait DecoderExt {
+pub trait DecoderExt {
     fn coordinate_transform(&mut self) -> TiffResult<Option<CoordinateTransform>>;
 
     fn geo_key_directory(&mut self) -> TiffResult<GeoKeyDirectory>;

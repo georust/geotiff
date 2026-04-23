@@ -6,11 +6,10 @@ use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 use tiff::TiffResult;
 
-pub use crate::geo_key_directory::*;
-
-use crate::coordinate_transform::*;
-use crate::decoder_ext::*;
-use crate::raster_data::*;
+pub use crate::coordinate_transform::CoordinateTransform;
+pub use crate::decoder_ext::DecoderExt;
+pub use crate::geo_key_directory::{GeoKeyDirectory, RasterType};
+use crate::raster_data::RasterData;
 
 mod coordinate_transform;
 mod decoder_ext;

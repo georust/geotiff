@@ -1,12 +1,14 @@
 # A GeoTIFF library for Rust
 
 [![geotiff on crates.io](https://img.shields.io/crates/v/geotiff.svg)](https://crates.io/crates/geotiff)
+[![docs.rs](https://img.shields.io/docsrs/geotiff?label=docs.rs%20latest)](https://docs.rs/geotiff)
 
 > [!IMPORTANT]
-> This crate is currently undergoing a significant refactoring process to be built on
-> top of the [`tiff`](https://crates.io/crates/tiff) crate, so expect breaking changes
-> as we work towards a v0.1.0 release sometime in 2024 (contributions are welcome!). See
-> the thread at https://github.com/georust/geotiff/issues/7 for more details.
+> This crate has went through a significant refactoring process to be built on top of
+> the [`tiff`](https://crates.io/crates/tiff) crate in 2024/2025, but do expect breaking
+> changes post v0.1.0, as we may decide to do another redesign to work towards
+> asynchronous reading (see thread at https://github.com/georust/geotiff/issues/13).
+> That said, there are still many features to add, so contributions are welcome!
 
 ## Motivation (pre-2020)
 
@@ -23,21 +25,27 @@ You might also consider the [GDAL bindings](https://github.com/georust/gdal) for
 
 ## Library Usage
 
-The library exposes a `TIFF` struct that can be used to open GeoTIFFs and interact with them. Its use is simple:
+The library exposes a `GeoTiff` struct that can be used to open GeoTIFFs and interact with them. Its use is simple:
 
 ```rust
-TIFF::open("geotiff.tif");
+use geotiff::GeoTiff;
+
+let reader = GeoTiff::read("geotiff.tif")?;
 ```
 
-`TIFF::open(...)` returns an `Option`, depending if the open operation was successful or not. Individual values can then be read (for the moment, only at pixels) using:
+`GeoTiff::read(...)` returns a `TiffResult<GeoTiff>`, and depending on whether the read
+operation was successful or not, individual values can then be read (for the moment,
+only at pixels) using:
 
 ```rust
-x.get_value_at(longitude, latitude);
+use geo_types::Coord;
+
+reader.get_value_at::<u8>(&Coord { x: 10, y: 20 }, 0);
 ```
 
-Where `longitude` corresponds to the `image_length` and `latitude` to the `image_width`. This might be a bit counter intuitive, but seems consistent with GDAL (have to look into this).
-
-Caution: the `longitude` and `latitude` are only in pixels, no coordinate transformations are applied!
+Where `x` corresponds to Longitude/Eastings and `y` to Latitude/Northings, depending on
+whether the GeoTIFF file uses a geographic or projected reference system. The `0` refers
+to the band/channel number.
 
 ## Development and Testing
 
