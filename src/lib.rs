@@ -9,7 +9,7 @@ use tiff::TiffResult;
 pub use crate::coordinate_transform::CoordinateTransform;
 pub use crate::decoder_ext::DecoderExt;
 pub use crate::geo_key_directory::{GeoKeyDirectory, RasterType};
-use crate::raster_data::RasterData;
+use crate::raster_data::{RasterData, RasterValue};
 
 mod coordinate_transform;
 mod decoder_ext;
