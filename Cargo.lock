@@ -210,7 +210,6 @@ dependencies = [
  "delaunator",
  "geo-index",
  "geo-types",
- "num-traits",
  "num_enum",
  "proj",
  "tiff",
