@@ -178,7 +178,9 @@ fn test_transform<P: AsRef<Path>>(path: P, raster_type: RasterType) {
 
     // Non-capital location should return background color
     assert_eq!(
-        geotiff.get_value_at::<u8>(&expected_model_extent.center(), 0),
+        geotiff
+            .get_value_at(&expected_model_extent.center(), 0)
+            .map(|v| v.as_u8().unwrap()),
         Some(WHITE)
     );
 
@@ -187,12 +189,9 @@ fn test_transform<P: AsRef<Path>>(path: P, raster_type: RasterType) {
     let min = expected_model_extent.min();
     let max = expected_model_extent.max();
 
+    assert_eq!(geotiff.get_value_at(&Coord { x: min.x, y: min.y }, 0), None);
     assert_eq!(
-        geotiff.get_value_at::<u8>(&Coord { x: min.x, y: min.y }, 0),
-        None
-    );
-    assert_eq!(
-        geotiff.get_value_at::<u8>(
+        geotiff.get_value_at(
             &Coord {
                 x: max.x + 1.0,
                 y: max.y + 1.0,
@@ -203,13 +202,52 @@ fn test_transform<P: AsRef<Path>>(path: P, raster_type: RasterType) {
     );
 
     // Each capital location should return Some(BLACK)
-    assert_eq!(geotiff.get_value_at::<u8>(&bregenz, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&eisenstadt, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&graz, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&innsbruck, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&klagenfurt, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&linz, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&salzburg, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&sankt_poelten, 0), Some(BLACK));
-    assert_eq!(geotiff.get_value_at::<u8>(&vienna, 0), Some(BLACK));
+    assert_eq!(
+        geotiff
+            .get_value_at(&bregenz, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff
+            .get_value_at(&eisenstadt, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff.get_value_at(&graz, 0).map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff
+            .get_value_at(&innsbruck, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff
+            .get_value_at(&klagenfurt, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff.get_value_at(&linz, 0).map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff
+            .get_value_at(&salzburg, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff
+            .get_value_at(&sankt_poelten, 0)
+            .map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
+    assert_eq!(
+        geotiff.get_value_at(&vienna, 0).map(|v| v.as_u8().unwrap()),
+        Some(BLACK)
+    );
 }
