@@ -1,5 +1,7 @@
+use std::io::Error;
+
 use geo_types::Coord;
-use tiff::{TiffError, TiffFormatError, TiffResult};
+use tiff::{TiffError, TiffResult};
 
 use crate::coordinate_transform::CoordinateTransform;
 
@@ -16,8 +18,8 @@ impl CoordinateTransform {
 
         let det = transform[0] * transform[4] - transform[1] * transform[3];
         if det.abs() < 0.000000000000001 {
-            return Err(TiffError::FormatError(TiffFormatError::Format(
-                "Provided transformation matrix is not invertible".into(),
+            return Err(TiffError::IoError(Error::other(
+                "Provided transformation matrix is not invertible".to_string(),
             )));
         }
 

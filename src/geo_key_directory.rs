@@ -1,6 +1,8 @@
+use std::io::Error;
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use tiff::tags::Tag;
-use tiff::{TiffError, TiffFormatError, TiffResult};
+use tiff::{TiffError, TiffResult};
 
 /// The GeoKeyDirectoryTag Requirements Class specifies the requirements for
 /// implementing the reserved GeoKeyDirectoryTag TIFF tag.
@@ -66,8 +68,8 @@ impl GeoKeyDirectory {
     ) -> TiffResult<Self> {
         let mut directory = Self::default();
         if directory_data.len() < 4 {
-            return Err(TiffError::FormatError(TiffFormatError::Format(
-                "Unexpected length of directory data: must be at least 4.".into(),
+            return Err(TiffError::IoError(Error::other(
+                "Unexpected length of directory data: must be at least 4.".to_string(),
             )));
         }
 
@@ -77,8 +79,8 @@ impl GeoKeyDirectory {
         let number_of_keys = directory_data[3] as usize;
 
         if directory_data.len() - 4 != 4 * number_of_keys {
-            return Err(TiffError::FormatError(TiffFormatError::Format(
-                "Unexpected length of directory data: number of keys does not match length of directory data.".into())
+            return Err(TiffError::IoError(Error::other(
+                "Unexpected length of directory data: number of keys does not match length of directory data.".to_string())
             ));
         }
 
@@ -87,7 +89,7 @@ impl GeoKeyDirectory {
             .filter_map(|c| <&[u16; 4]>::try_from(c).ok())
         {
             let key_tag = GeoKeyDirectoryTag::try_from(*key_id).map_err(|_| {
-                TiffError::FormatError(TiffFormatError::Format(format!(
+                TiffError::IoError(Error::other(format!(
                     "Unknown GeoKeyDirectoryTag: {key_id}"
                 )))
             })?;
@@ -103,7 +105,7 @@ impl GeoKeyDirectory {
                         Self::get_short(key_tag, location_tag, *count, *value_or_offset)?;
                     directory.raster_type =
                         Some(RasterType::try_from(raster_type).map_err(|_| {
-                            TiffError::FormatError(TiffFormatError::Format(format!(
+                            TiffError::IoError(Error::other(format!(
                                 "Unknown raster type: {raster_type}"
                             )))
                         })?)
@@ -468,13 +470,13 @@ impl GeoKeyDirectory {
     ) -> TiffResult<u16> {
         // Check that TIFFTagLocation == 0 so value is of SHORT type
         if location_tag.is_some() {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Key `{key_tag:?}` did not have the expected SHORT value type."
             ))));
         }
 
         if count != 1 {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Unexpected count: expected 1, got {count}."
             ))));
         }
@@ -490,19 +492,19 @@ impl GeoKeyDirectory {
         offset: u16,
     ) -> TiffResult<f64> {
         if location_tag != Some(Tag::GeoDoubleParamsTag) {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Key `{key_tag:?}` did not have the expected DOUBLE value type."
             ))));
         }
 
         if count != 1 {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Unexpected count: expected 1, got {count}."
             ))));
         }
 
         match data.get(offset as usize) {
-            None => Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            None => Err(TiffError::IoError(Error::other(format!(
                 "Offset out of bounds: the length is {} but the offset is {offset}",
                 data.len()
             )))),
@@ -520,14 +522,14 @@ impl GeoKeyDirectory {
         let len = data.len();
 
         if location_tag != Some(Tag::GeoAsciiParamsTag) {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Key `{key_tag:?}` did not have the expected ASCII value type."
             ))));
         }
 
         let start = offset as usize;
         if start >= len {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "Start offset out of bounds: the length is {} but the offset is {offset}.",
                 len
             ))));
@@ -535,7 +537,7 @@ impl GeoKeyDirectory {
 
         let end = (offset + count - 1) as usize;
         if end >= len {
-            return Err(TiffError::FormatError(TiffFormatError::Format(format!(
+            return Err(TiffError::IoError(Error::other(format!(
                 "End offset out of bounds: the length is {} but the offset is {offset}.",
                 len
             ))));
