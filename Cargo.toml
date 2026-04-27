@@ -17,6 +17,7 @@ rust-version = "1.70"
 delaunator = { version = "1.0", optional = true }
 geo-index = { version = "0.1", optional = true }
 geo-types = { version = "0.7" }
+half = "2.4.1"
 num_enum = "0.7"
 tiff = "0.10"
 

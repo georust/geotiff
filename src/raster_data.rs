@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
+use half::f16;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RasterValue {
@@ -8,6 +9,7 @@ pub enum RasterValue {
     U16(u16),
     U32(u32),
     U64(u64),
+    F16(f16),
     F32(f32),
     F64(f64),
     I8(i8),
@@ -93,6 +95,7 @@ pub enum RasterData {
     U16(Vec<u16>),
     U32(Vec<u32>),
     U64(Vec<u64>),
+    F16(Vec<f16>),
     F32(Vec<f32>),
     F64(Vec<f64>),
     I8(Vec<i8>),
@@ -110,6 +113,7 @@ impl Debug for RasterData {
                 RasterData::U16(_) => "u16",
                 RasterData::U32(_) => "u32",
                 RasterData::U64(_) => "u64",
+                RasterData::F16(_) => "f16",
                 RasterData::F32(_) => "f32",
                 RasterData::F64(_) => "f64",
                 RasterData::I8(_) => "i8",
@@ -129,6 +133,7 @@ impl RasterData {
             RasterData::U16(data) => data.len(),
             RasterData::U32(data) => data.len(),
             RasterData::U64(data) => data.len(),
+            RasterData::F16(data) => data.len(),
             RasterData::F32(data) => data.len(),
             RasterData::F64(data) => data.len(),
             RasterData::I8(data) => data.len(),
@@ -144,6 +149,7 @@ impl RasterData {
             RasterData::U16(data) => RasterValue::U16(data[index]),
             RasterData::U32(data) => RasterValue::U32(data[index]),
             RasterData::U64(data) => RasterValue::U64(data[index]),
+            RasterData::F16(data) => RasterValue::F16(data[index]),
             RasterData::F32(data) => RasterValue::F32(data[index]),
             RasterData::F64(data) => RasterValue::F64(data[index]),
             RasterData::I8(data) => RasterValue::I8(data[index]),
