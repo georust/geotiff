@@ -7,7 +7,7 @@ use tiff::{TiffError, TiffResult};
 /// The GeoKeyDirectoryTag Requirements Class specifies the requirements for
 /// implementing the reserved GeoKeyDirectoryTag TIFF tag.
 ///
-/// Ref: https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_geokeydirectorytag
+/// Ref: <https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_geokeydirectorytag>
 #[derive(Debug, PartialEq)]
 pub struct GeoKeyDirectory {
     pub key_directory_version: u16,
@@ -608,7 +608,7 @@ impl Default for GeoKeyDirectory {
 
 /// GeoTIFF key names and IDs.
 ///
-/// Ref: https://docs.ogc.org/is/19-008r4/19-008r4.html#_summary_of_geokey_ids_and_names
+/// Ref: <https://docs.ogc.org/is/19-008r4/19-008r4.html#_summary_of_geokey_ids_and_names>
 #[derive(Debug, TryFromPrimitive, IntoPrimitive)]
 #[repr(u16)]
 enum GeoKeyDirectoryTag {
@@ -668,7 +668,7 @@ enum GeoKeyDirectoryTag {
 
 /// The raster type establishes the raster space used.
 ///
-/// Ref: https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_gtrastertypegeokey
+/// Ref: <https://docs.ogc.org/is/19-008r4/19-008r4.html#_requirements_class_gtrastertypegeokey>
 #[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u16)]
 pub enum RasterType {
